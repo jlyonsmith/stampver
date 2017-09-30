@@ -1,0 +1,24 @@
+{
+  "name": "stampver",
+  "version": "1.0.0",
+  "description": "Version stamping tool",
+  "main": "dist/stampver.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlyonsmith/stampver.git"
+  },
+  "keywords": [
+    "version",
+    "stamp",
+    "tool"
+  ],
+  "author": "John Lyon-Smith",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jlyonsmith/stampver/issues"
+  },
+  "homepage": "https://github.com/jlyonsmith/stampver#readme"
+}
