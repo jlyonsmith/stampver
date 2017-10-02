@@ -1,0 +1,35 @@
+{
+  filenames: [
+    'package.json'
+  ],
+  buildFormat: 'full',
+  tags: {
+    major: 1,
+    minor: 0,
+    patch: 0,
+    build: '20170930',
+    revision: 0
+    tz: 'America/Los_Angeles',
+    startYear: '2017',
+    company: 'John Lyon-Smith',
+    product: 'stampver'
+  },
+  fileTypes: [-
+    {
+      name: 'Node Package',
+      glob: 'package\\.json',
+      update: {
+        search: '^(?<begin> *"version" *: *")\\d+\\.\\d+\\.\\d+(?<end>" *, *)$',
+        replace: '${begin}${major}.${minor}.${patch}${end}'
+      }
+    },
+    {
+      name: 'Javascript File',
+      glob: 'version\\.js',
+      update: {
+        search: '^(?<begin> *"version" *: *")\\d+\\.\d+\\.\d+(?<end>" *, *)$',
+        replace: '${begin}${major}.${minor}.${patch}${end}'
+      }
+    }
+  ]
+}
