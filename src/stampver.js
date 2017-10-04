@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import JSON5 from 'json5'
 import { version } from './version'
-import xregexp from 'xregexp'
+import XRegExp from 'xregexp'
 import minimatch from 'minimatch'
 import util from 'util'
 import moment from 'moment-timezone'
@@ -40,6 +40,7 @@ class StampVer {
 
   static replaceTags(str, tags) {
     // TODO: This is horribly inefficient - takes multiple passed over the whole string <sigh>
+    // TODO: Should return a flag indicating something was replaced!
     Object.entries(tags).forEach(arr => {
       str = str.replace('\$\{' + arr[0] + '\}', arr[1])
     })
@@ -120,8 +121,6 @@ for the format of the version.json5 file.
     const now = moment.tz(moment(), data.tz)
     let build
 
-    this.log.info(`Using '${data.buildFormat}' for build number format`)
-
     switch (data.buildFormat) {
       case 'jdate':
         build = StampVer.getJDate(now, data.startYear)
@@ -155,32 +154,31 @@ for the format of the version.json5 file.
         return -1
     }
 
-    this.log.info('Version tags are:')
+    this.log.info('Tags are:')
 
     Object.entries(data.tags).forEach(arr => {
       this.log.info(`  ${arr[0]}='${arr[1]}'`)
     })
 
-    if (args.update) {
-      this.log.info('Updating version information:')
-    }
-
     const versionDirname = path.dirname(versionFn)
+
+    this.log.info(`${args.update ? 'Updating' : 'Checking'} file list:`)
 
     for (let filename of data.filenames) {
       let match = false
+      const fullFilename = path.resolve(path.join(versionDirname, filename))
+
+      this.log.info(`  ${fullFilename}`)
 
       for (let fileType of data.fileTypes) {
-        if (minimatch(filename, fileType.glob)) {
+        if (!minimatch(filename, fileType.glob)) {
           continue
         }
 
         match = true
 
-        const fullFilename = path.resolve(path.join(versionDirname, filename))
-
         if (fileType.write) {
-          const dirname = File.dirname(fullFilename)
+          const dirname = path.dirname(fullFilename)
 
           if (!fs.existsSync(dirname)) {
             this.log.error(`Directory '${dirname}' does not exist`)
@@ -188,33 +186,49 @@ for the format of the version.json5 file.
           }
 
           if (args.update) {
-            await util.promisify(fs.writeFile)(filename, replaceTags(fileType.write, data.tags))
+            await util.promisify(fs.writeFile)(filename, StampVer.replaceTags(fileType.write, data.tags))
           }
         } else {
-          if (fs.existsSync(filename)) {
+          if (fs.existsSync(fullFilename)) {
             const updates = fileType.updates || [ fileType.update ]
             let content = await util.promisify(fs.readFile)(fullFilename, { encoding: 'utf8' })
 
             updates.forEach(update => {
-              content = StampVer.replaceTags(content, data.tags)
+              let found = false
+              let replace = StampVer.replaceTags(update.replace, data.tags)
+              let search = new XRegExp(update.search, 'm')
+              content = XRegExp.replace(content, search, (match) => {
+                found = true
+                return StampVer.replaceTags(replace, match)
+              }, 'one')
+
+              if (!found) {
+                this.log.error(`File type '${fileType.name}' update '${update.search}' did not match anything`)
+              }
             })
 
-            await util.promisify(fs.writeFile)(fullFilename, content)
+            if (args.update) {
+              await util.promisify(fs.writeFile)(fullFilename, content)
+            }
           } else {
-            this.log.error(`file '${fullFilename}' does not exist to update`)
+            this.log.error(`File '${fullFilename}' does not exist to update`)
             return -1
           }
         }
 
-        if (!match) {
-          this.log.error(`File '${fullFilename}' has no matching file type`)
-          continue
+        if (match) {
+          break
         }
+      }
+
+      if (!match) {
+        this.log.error(`File '${fullFilename}' has no matching file type`)
+        continue
       }
     }
 
     if (args.update) {
-      await util.promisify(fs.writeFile)(versionFn, JSON5.stringify(data))
+      await util.promisify(fs.writeFile)(versionFn, JSON5.stringify(data, null, '  '))
     }
 
     return 0

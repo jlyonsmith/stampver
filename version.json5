@@ -1,6 +1,8 @@
 {
   filenames: [
-    'package.json'
+    'js/package.json',
+    'js/version.js',
+    'version.tag.txt'
   ],
   buildFormat: 'full',
   tags: {
@@ -30,6 +32,11 @@
         search: '^(?<begin> *"version" *: *")\\d+\\.\d+\\.\d+(?<end>" *, *)$',
         replace: '${begin}${major}.${minor}.${patch}${end}'
       }
+    },
+    {
+      name: 'Commit file',
+      glob: '*.tag.txt',
+      write: 'Version ${major}${minor}${patch}-${build}.${revision}'
     }
   ]
 }
