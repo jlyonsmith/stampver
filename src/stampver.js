@@ -5,6 +5,8 @@ import JSON5 from 'json5'
 import { version } from './version'
 import xregexp from 'xregexp'
 import minimatch from 'minimatch'
+import util from 'util'
+import moment from 'moment-timezone'
 
 class StampVer {
   constructor(log) {
@@ -16,7 +18,7 @@ class StampVer {
     let dir = process.cwd()
 
     while (dir.length !== 0) {
-      const filename = path.join(dir, 'version.json')
+      const filename = path.join(dir, 'version.json5')
 
       if (fs.existsSync(filename)) {
         return filename
@@ -28,18 +30,20 @@ class StampVer {
     return null
   }
 
-  getFullDate(now) {
-    return now.year() * 10000 + now.month() * 100 + now.date()
+  static getFullDate(now) {
+    return now.year() * 10000 + (now.month() + 1) * 100 + now.date()
   }
 
-  getJDate(now, startYear) {
+  static getJDate(now, startYear) {
     return (((now.year() - startYear + 1) * 10000) + (now.month() * 100) + now.date()).toString()
   }
 
-  replaceTags(text, tags) {
-    Object.entries(data.tags).forEach(arr => {
-      // TODO: Actually replace tags here
+  static replaceTags(str, tags) {
+    // TODO: This is horribly inefficient - takes multiple passed over the whole string <sigh>
+    Object.entries(tags).forEach(arr => {
+      str = str.replace('\$\{' + arr[0] + '\}', arr[1])
     })
+    return str
   }
 
   async run(argv) {
@@ -67,7 +71,7 @@ Usage: stampver [-u] [<version-file>]
 Will increment the build and/or revision number and search/replace all version other
 information in a list of files.
 
-Searches for a 'version.json' file in the current and parent directories and uses
+Searches for a 'version.json5' file in the current and parent directories and uses
 that as the root directory for project files. See https://github.com/jlyonsmith/stampver
 for the format of the version.json5 file.
 
@@ -104,9 +108,10 @@ for the format of the version.json5 file.
 
     this.log.info(`Version file is '${versionFn}''`)
 
-    let data
+    let data = null
     try {
-      data = JSON5.parse(await fs.readFile(versionFn, { encoding: 'utf8' }))
+      const json5 = await util.promisify(fs.readFile)(versionFn, { encoding: 'utf8' })
+      data = JSON5.parse(json5)
     } catch (error) {
       this.log.error(`'${versionFn}': ${error.message}`)
       return -1
@@ -114,6 +119,8 @@ for the format of the version.json5 file.
 
     const now = moment.tz(moment(), data.tz)
     let build
+
+    this.log.info(`Using '${data.buildFormat}' for build number format`)
 
     switch (data.buildFormat) {
       case 'jdate':
@@ -123,7 +130,7 @@ for the format of the version.json5 file.
           data.tags.build = build
           data.tags.revision = 0
         } else {
-          data.Tags.revision += 1
+          data.tags.revision += 1
         }
         break
 
@@ -151,20 +158,20 @@ for the format of the version.json5 file.
     this.log.info('Version tags are:')
 
     Object.entries(data.tags).forEach(arr => {
-      this.log.info('  ${arr[0]}=${arr[1]}')
+      this.log.info(`  ${arr[0]}='${arr[1]}'`)
     })
 
-    if (args.update)
+    if (args.update) {
       this.log.info('Updating version information:')
-    end
+    }
 
     const versionDirname = path.dirname(versionFn)
 
-    for (let filename in data.filenames) {
-      const match = false
+    for (let filename of data.filenames) {
+      let match = false
 
       for (let fileType of data.fileTypes) {
-        if (minimatch(filename, fileType.match)) {
+        if (minimatch(filename, fileType.glob)) {
           continue
         }
 
@@ -175,46 +182,39 @@ for the format of the version.json5 file.
         if (fileType.write) {
           const dirname = File.dirname(fullFilename)
 
-          if (!await fs.exists(dirname)) {
+          if (!fs.existsSync(dirname)) {
             this.log.error(`Directory '${dirname}' does not exist`)
             return -1
           }
 
           if (args.update) {
-            await fs.writeFile(filename, replaceTags(fileType.write, data.tags))
+            await util.promisify(fs.writeFile)(filename, replaceTags(fileType.write, data.tags))
           }
         } else {
-          if (fs.exists(filename)) {
-            let updates
+          if (fs.existsSync(filename)) {
+            const updates = fileType.updates || [ fileType.update ]
+            let content = await util.promisify(fs.readFile)(fullFilename, { encoding: 'utf8' })
 
-            if (!fileType.updates) {
-              updates = updates
-            } else {
-              updates = [ fileType.update ]
-            }
-
-            const content = await fs.readFile(fullFilename)
-
-            fileType.updates.forEach(update => {
-              this.replaceTags(content, data.tags)
+            updates.forEach(update => {
+              content = StampVer.replaceTags(content, data.tags)
             })
 
-            await fs.writeFile(fullFilename)
+            await util.promisify(fs.writeFile)(fullFilename, content)
           } else {
-            this.log.error('file #{path} does not exist to update')
+            this.log.error(`file '${fullFilename}' does not exist to update`)
             return -1
           }
         }
 
         if (!match) {
-          this.log.error(`File '${filename}' has no matching file type`)
+          this.log.error(`File '${fullFilename}' has no matching file type`)
           continue
         }
       }
     }
 
     if (args.update) {
-      await fs.writeFile(versionFn, JSON5.stringify(data))
+      await util.promisify(fs.writeFile)(versionFn, JSON5.stringify(data))
     }
 
     return 0
