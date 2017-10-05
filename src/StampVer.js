@@ -9,7 +9,7 @@ import util from 'util'
 import moment from 'moment-timezone'
 import chalk from 'chalk'
 
-class StampVer {
+export class StampVer {
   constructor(log) {
     this.log = log
     this.run = this.run.bind(this)
@@ -84,7 +84,7 @@ class StampVer {
 
     if (args.help) {
       this.log.info(`
-Version stamper.
+Version stamper
 
 Usage: stampver [-u] [<version-file>]
 
@@ -104,6 +104,11 @@ for the format of the version.json5 file.
 --help                  Displays this help
 --version               Displays tool version
 `)
+      return 0
+    }
+
+    if (args.version) {
+      this.log.info(`v${fullVersion}`)
       return 0
     }
 
@@ -255,16 +260,3 @@ for the format of the version.json5 file.
     return 0
   }
 }
-
-const log = {
-  info: console.info,
-  error: function() { console.error(chalk.red('error:', [...arguments].join(' ')))},
-  warning: function() { console.error(chalk.yellow('warning:', [...arguments].join(' ')))}
-}
-
-const stampVer = new StampVer(log)
-stampVer.run(process.argv.slice(2)).then((exitCode) => {
-  process.exit(exitCode)
-}).catch((err) => {
-  console.error(err)
-})
