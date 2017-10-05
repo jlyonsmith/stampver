@@ -144,13 +144,31 @@ for the format of the version.json5 file.
     }
 
     const now = moment.tz(moment(), data.tz)
+    const newMajorMinorPatch = (args.increment !== 'none')
     let build
+
+    if (newMajorMinorPatch) {
+      switch (args.increment) {
+        case 'major':
+          data.tags.major += 1
+          data.tags.minor = 0
+          data.tags.patch = 0
+          break
+        case 'minor':
+          data.tags.minor += 1
+          data.tags.patch = 0
+          break
+        case 'patch':
+          data.tags.patch += 1
+          break
+      }
+    }
 
     switch (data.buildFormat) {
       case 'jdate':
         build = StampVer.getJDate(now, data.startYear)
 
-        if (data.tags.build !== build) {
+        if (newMajorMinorPatch || data.tags.build !== build) {
           data.tags.build = build
           data.tags.revision = 0
         } else {
@@ -161,7 +179,7 @@ for the format of the version.json5 file.
       case 'full':
         build = StampVer.getFullDate(now)
 
-        if (data.tags.build !== build) {
+        if (newMajorMinorPatch || data.tags.build !== build) {
           data.tags.build = build
           data.tags.revision = 0
         } else {
@@ -170,8 +188,12 @@ for the format of the version.json5 file.
         break
 
       case 'incr':
-        data.tags.build += 1
-        data.tags.revision = 0
+        if (newMajorMinorPatch) {
+           data.tags.build = 0
+        } else {
+          data.tags.build += 1
+        }
+        data.tags = revision = 0
         break
 
       default:
