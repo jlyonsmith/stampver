@@ -7,6 +7,7 @@ import XRegExp from 'xregexp'
 import minimatch from 'minimatch'
 import util from 'util'
 import moment from 'moment-timezone'
+import chalk from 'chalk'
 
 class StampVer {
   constructor(log) {
@@ -39,11 +40,31 @@ class StampVer {
   }
 
   static replaceTags(str, tags) {
-    // TODO: This is horribly inefficient - takes multiple passed over the whole string <sigh>
-    // TODO: Should return a flag indicating something was replaced!
-    Object.entries(tags).forEach(arr => {
-      str = str.replace('\$\{' + arr[0] + '\}', arr[1])
-    })
+    const tagPrefix = '${'
+    const tagSuffix = '}'
+
+    for (let i = str.length - 1; i != -1; ) {
+      const tagEnd = str.lastIndexOf(tagSuffix, i)
+
+      if (tagEnd <= 0) {
+          break
+      }
+
+      const tagStart = str.lastIndexOf(tagPrefix, tagEnd - 1)
+
+      if (tagStart < 0) {
+          break
+      }
+
+      const key = str.substring(tagStart + tagPrefix.length, tagEnd)
+      const tag = tags[key]
+
+      if (typeof tag !== 'undefined') {
+        str = str.substring(0, tagStart) + tag + str.substring(tagEnd + tagSuffix.length)
+      }
+
+      i = tagStart - 1
+    }
     return str
   }
 
@@ -69,8 +90,8 @@ Usage: stampver [-u] [<version-file>]
 
 <version-file> defaults to 'version.json5'.
 
-Will increment the build and/or revision number and search/replace all version other
-information in a list of files.
+Will increment the build and/or revision number and search/replace all other version
+related information in a list of files.
 
 Searches for a 'version.json5' file in the current and parent directories and uses
 that as the root directory for project files. See https://github.com/jlyonsmith/stampver
@@ -203,7 +224,7 @@ for the format of the version.json5 file.
               }, 'one')
 
               if (!found) {
-                this.log.error(`File type '${fileType.name}' update '${update.search}' did not match anything`)
+                this.log.warning(`File type '${fileType.name}' update '${update.search}' did not match anything`)
               }
             })
 
@@ -235,7 +256,13 @@ for the format of the version.json5 file.
   }
 }
 
-const stampVer = new StampVer(console)
+const log = {
+  info: console.info,
+  error: function() { console.error(chalk.red('error:', [...arguments].join(' ')))},
+  warning: function() { console.error(chalk.yellow('warning:', [...arguments].join(' ')))}
+}
+
+const stampVer = new StampVer(log)
 stampVer.run(process.argv.slice(2)).then((exitCode) => {
   process.exit(exitCode)
 }).catch((err) => {
