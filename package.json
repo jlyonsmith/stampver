@@ -1,6 +1,6 @@
 {
   "name": "stampver",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "engines": {
     "node": ">=8.0"
   },

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { StampVer } from './StampVer'
 import chalk from 'chalk'
 
