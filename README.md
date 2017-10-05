@@ -100,7 +100,7 @@ The latter two values are used for pre-release versions and for internal build t
 
 So a semantic version using the above would look like `major.minor.patch`.  A _pre-release_, _internal_ or _full_ version number might look like `major.minor.patch-build.revision`.
 
-To run tool and check everything is set up correctly run:
+To run tool the and check everything is set up correctly run:
 
 ```Shell
 stampver
@@ -109,16 +109,16 @@ stampver
 To actually do an update of the build and/or revision number do:
 
 ```Shell
-stampver -update
+stampver --update
 ```
 
 This will rewrite all the files specified in the `version.json5` file.  To increment the major, minor or patch number do:
 
 ```Shell
-stampver -update -increment patch
+stampver --update --increment patch
 ```
 
-See `--help` for more options.
+See `--help` for more options and `--version` for, well, the version number.
 
 ### `filenames`
 
