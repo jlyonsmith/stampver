@@ -1,4 +1,4 @@
-import { StampVer } from './stampver'
+import { StampVer } from './StampVer'
 import tmp from 'tmp'
 import fs from 'fs'
 import util from 'util'
@@ -39,6 +39,18 @@ test('test help', done => {
   return tool.run(['--help']).then(exitCode => {
     expect(exitCode).toBe(0)
     expect(getOutput(mockLog.info)).toEqual(expect.stringContaining('--help'))
+    done()
+  })
+})
+
+
+test('test version', done => {
+  const mockLog = getMockLog()
+  const tool = new StampVer(mockLog)
+
+  return tool.run(['--version']).then(exitCode => {
+    expect(exitCode).toBe(0)
+    expect(getOutput(mockLog.info)).toEqual(expect.stringMatching(/^v/))
     done()
   })
 })

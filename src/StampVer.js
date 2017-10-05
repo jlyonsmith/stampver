@@ -2,12 +2,11 @@ import parseArgs from 'minimist'
 import fs from 'fs'
 import path from 'path'
 import JSON5 from 'json5'
-import { version } from './version'
+import { fullVersion } from './version'
 import XRegExp from 'xregexp'
 import minimatch from 'minimatch'
 import util from 'util'
 import moment from 'moment-timezone'
-import chalk from 'chalk'
 
 export class StampVer {
   constructor(log) {

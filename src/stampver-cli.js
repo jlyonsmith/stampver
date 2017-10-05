@@ -1,4 +1,5 @@
-import { StampVer } from './tools/StampVer'
+import { StampVer } from './StampVer'
+import chalk from 'chalk'
 
 const log = {
   info: console.info,

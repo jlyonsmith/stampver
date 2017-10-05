@@ -16,7 +16,7 @@
     "test": "jest"
   },
   "bin": {
-    "stampver": "dist/index.js"
+    "stampver": "dist/stampver-cli.js"
   },
   "repository": {
     "type": "git",
