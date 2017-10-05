@@ -2,15 +2,16 @@
   filenames: [
     "package.json",
     "src/version.js",
-    "scratch/version.tag.txt"
+    "scratch/version.tag.txt",
+    "scratch/version.desc.txt"
   ],
   buildFormat: "full",
   tags: {
     major: 1,
     minor: 0,
-    patch: 0,
+    patch: 1,
     build: 20171005,
-    revision: 5,
+    revision: 0,
     tz: "America/Los_Angeles",
     startYear: "2017",
     company: "John Lyon-Smith",
@@ -40,8 +41,13 @@
       ]
     },
     {
-      name: "Commit file",
+      name: "Commit tag file",
       glob: "**/*.tag.txt",
+      write: "v${major}.${minor}.${patch}"
+    },
+    {
+      name: "Commit tag description file",
+      glob: "**/*.desc.txt",
       write: "Version ${major}.${minor}.${patch}-${build}.${revision}"
     }
   ]
