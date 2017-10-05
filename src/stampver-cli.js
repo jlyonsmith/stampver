@@ -1,4 +1,4 @@
-import { StampVer } from './StampVer'
+import { StampVer } from './tools/StampVer'
 
 const log = {
   info: console.info,
