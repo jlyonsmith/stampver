@@ -120,9 +120,13 @@ stampver --update --increment patch
 
 See `--help` for more options and `--version` for, well, the version number.
 
+## `version.json5` File Format
+
+The file has the following sections.
+
 ### `filenames`
 
-An array of files names, rooted at the location of the `version.json5` file.  
+An array of files names. Use relative paths rooted at the location of the `version.json5` file.  
 
 ### `buildFormat`
 
@@ -157,7 +161,7 @@ Within the `replace` tag you can use any values listed in `tags` and any named m
 
 ## Common `fileTypes`
 
-Here is the JSON5 for some common file types that you can use as starting points for you projects:
+Here is the JSON5 for some common file types that you can use as starting points for your projects:
 
 ```JSON5
 {
