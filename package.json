@@ -9,7 +9,6 @@
     "linux"
   ],
   "description": "Version stamping tool",
-  "main": "dist/stampver.js",
   "scripts": {
     "build": "babel src -d dist -s --ignore *.test.js",
     "release": "babel-node tasks/release.js",

@@ -13,9 +13,7 @@
     build: 20171005,
     revision: 0,
     tz: "America/Los_Angeles",
-    startYear: "2017",
-    company: "John Lyon-Smith",
-    product: "stampver"
+    startYear: "2017"
   },
   fileTypes: [
     {
