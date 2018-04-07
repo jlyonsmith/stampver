@@ -70,10 +70,11 @@ export class StampVerTool {
   async run(argv) {
     const options = {
       string: ['increment'],
-      boolean: ['help', 'version', 'update'],
+      boolean: ['help', 'version', 'update', 'sequence'],
       alias: {
         'u': 'update',
-        'i': 'increment'
+        'i': 'increment',
+        's': 'sequence',
       },
       default: {
         'increment': 'none'
@@ -100,6 +101,8 @@ for the format of the version.json5 file.
 -i, --increment <part>  Also increment one of major, minor or patch parts of version.
                         Defaults to none.  Updating major will reset minor and patch to zero,
                         updating minor will just reset patch.
+-s, --sequence          Increment the sequence number. Just a monotonically increasing
+                        number.
 --help                  Displays this help
 --version               Displays tool version
 `)
@@ -168,6 +171,13 @@ for the format of the version.json5 file.
           data.tags.patch += 1
           break
       }
+    }
+
+    if (args.sequence) {
+      let sequence = data.tags.sequence || 0
+
+      sequence += 1
+      data.tags.sequence = sequence
     }
 
     switch (data.buildFormat) {
