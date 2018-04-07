@@ -1,4 +1,4 @@
-import { StampVer } from './StampVer'
+import { StampVerTool } from './StampVerTool'
 import tmp from 'tmp'
 import fs from 'fs'
 import util from 'util'
@@ -34,7 +34,7 @@ function getOutput(fn) {
 
 test('test help', done => {
   const mockLog = getMockLog()
-  const tool = new StampVer(mockLog)
+  const tool = new StampVerTool(mockLog)
 
   return tool.run(['--help']).then(exitCode => {
     expect(exitCode).toBe(0)
@@ -46,7 +46,7 @@ test('test help', done => {
 
 test('test version', done => {
   const mockLog = getMockLog()
-  const tool = new StampVer(mockLog)
+  const tool = new StampVerTool(mockLog)
 
   return tool.run(['--version']).then(exitCode => {
     expect(exitCode).toBe(0)
