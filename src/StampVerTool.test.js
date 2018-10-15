@@ -1,7 +1,7 @@
-import { StampVerTool } from './StampVerTool'
-import tmp from 'tmp'
-import fs from 'fs'
-import util from 'util'
+import { StampVerTool } from "./StampVerTool"
+import tmp from "tmp"
+import fs from "fs"
+import util from "util"
 
 let tmpDirObj = null
 
@@ -19,7 +19,7 @@ function getMockLog() {
   return {
     info: jest.fn(),
     warning: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
   }
 }
 
@@ -28,27 +28,26 @@ function getOutput(fn) {
   if (calls.length > 0 && calls[0].length > 0) {
     return calls[0][0]
   } else {
-    return ''
+    return ""
   }
 }
 
-test('test help', done => {
+test("test help", (done) => {
   const mockLog = getMockLog()
   const tool = new StampVerTool(mockLog)
 
-  return tool.run(['--help']).then(exitCode => {
+  return tool.run(["--help"]).then((exitCode) => {
     expect(exitCode).toBe(0)
-    expect(getOutput(mockLog.info)).toEqual(expect.stringContaining('--help'))
+    expect(getOutput(mockLog.info)).toEqual(expect.stringContaining("--help"))
     done()
   })
 })
 
-
-test('test version', done => {
+test("test version", (done) => {
   const mockLog = getMockLog()
   const tool = new StampVerTool(mockLog)
 
-  return tool.run(['--version']).then(exitCode => {
+  return tool.run(["--version"]).then((exitCode) => {
     expect(exitCode).toBe(0)
     expect(getOutput(mockLog.info)).toEqual(expect.stringMatching(/^v/))
     done()

@@ -1,12 +1,12 @@
-import parseArgs from 'minimist'
-import fs from 'fs'
-import path from 'path'
-import JSON5 from 'json5'
-import { fullVersion } from './version'
-import XRegExp from 'xregexp'
-import minimatch from 'minimatch'
-import util from 'util'
-import moment from 'moment-timezone'
+import parseArgs from "minimist"
+import fs from "fs"
+import path from "path"
+import JSON5 from "json5"
+import { fullVersion } from "./version"
+import XRegExp from "xregexp"
+import minimatch from "minimatch"
+import util from "util"
+import moment from "moment-timezone"
 
 export class StampVerTool {
   constructor(log) {
@@ -18,12 +18,12 @@ export class StampVerTool {
     let dir = process.cwd()
 
     while (dir.length !== 0) {
-      const filename = path.join(dir, 'version.json5')
+      const filename = path.join(dir, "version.json5")
 
       if (fs.existsSync(filename)) {
         return filename
       } else {
-        dir = dir.substring(0, dir.lastIndexOf('/'))
+        dir = dir.substring(0, dir.lastIndexOf("/"))
       }
     }
 
@@ -35,14 +35,18 @@ export class StampVerTool {
   }
 
   static getJDate(now, startYear) {
-    return (((now.year() - startYear + 1) * 10000) + (now.month() * 100) + now.date()).toString()
+    return (
+      (now.year() - startYear + 1) * 10000 +
+      now.month() * 100 +
+      now.date()
+    ).toString()
   }
 
   static replaceTags(str, tags) {
-    const tagPrefix = '${'
-    const tagSuffix = '}'
+    const tagPrefix = "${"
+    const tagSuffix = "}"
 
-    for (let i = str.length - 1; i != -1;) {
+    for (let i = str.length - 1; i != -1; ) {
       const tagEnd = str.lastIndexOf(tagSuffix, i)
 
       if (tagEnd <= 0) {
@@ -58,8 +62,11 @@ export class StampVerTool {
       const key = str.substring(tagStart + tagPrefix.length, tagEnd)
       const tag = tags[key]
 
-      if (typeof tag !== 'undefined') {
-        str = str.substring(0, tagStart) + tag + str.substring(tagEnd + tagSuffix.length)
+      if (typeof tag !== "undefined") {
+        str =
+          str.substring(0, tagStart) +
+          tag +
+          str.substring(tagEnd + tagSuffix.length)
       }
 
       i = tagStart - 1
@@ -69,16 +76,16 @@ export class StampVerTool {
 
   async run(argv) {
     const options = {
-      string: ['increment'],
-      boolean: ['help', 'version', 'update', 'sequence'],
+      string: ["increment"],
+      boolean: ["help", "version", "update", "sequence"],
       alias: {
-        'u': 'update',
-        'i': 'increment',
-        's': 'sequence',
+        u: "update",
+        i: "increment",
+        s: "sequence",
       },
       default: {
-        'increment': 'none'
-      }
+        increment: "none",
+      },
     }
     let args = parseArgs(argv, options)
 
@@ -114,7 +121,7 @@ for the format of the version.json5 file.
       return 0
     }
 
-    let versionFn = (args['_'].length > 0 ? args['_'][0] : null)
+    let versionFn = args["_"].length > 0 ? args["_"][0] : null
 
     if (versionFn && !fs.existSync(versionFn)) {
       this.log.error(`Unable to find file '${versionFn}'`)
@@ -124,7 +131,9 @@ for the format of the version.json5 file.
     versionFn = this.findVersionFile()
 
     if (!versionFn) {
-      this.log.error(`Unable to find version.json5 file in this or parent directories`)
+      this.log.error(
+        `Unable to find version.json5 file in this or parent directories`
+      )
       return -1
     }
 
@@ -139,7 +148,9 @@ for the format of the version.json5 file.
 
     let data = null
     try {
-      const json5 = await util.promisify(fs.readFile)(versionFn, { encoding: 'utf8' })
+      const json5 = await util.promisify(fs.readFile)(versionFn, {
+        encoding: "utf8",
+      })
       data = JSON5.parse(json5)
     } catch (error) {
       this.log.error(`'${versionFn}': ${error.message}`)
@@ -153,21 +164,21 @@ for the format of the version.json5 file.
       this.log.warning("No 'tz' value set - using local time zone")
       now = moment()
     }
-    const newMajorMinorPatch = (args.increment !== 'none')
+    const newMajorMinorPatch = args.increment !== "none"
     let build
 
     if (newMajorMinorPatch) {
       switch (args.increment) {
-        case 'major':
+        case "major":
           data.tags.major += 1
           data.tags.minor = 0
           data.tags.patch = 0
           break
-        case 'minor':
+        case "minor":
           data.tags.minor += 1
           data.tags.patch = 0
           break
-        case 'patch':
+        case "patch":
           data.tags.patch += 1
           break
       }
@@ -181,7 +192,7 @@ for the format of the version.json5 file.
     }
 
     switch (data.buildFormat) {
-      case 'jdate':
+      case "jdate":
         build = StampVerTool.getJDate(now, data.startYear)
 
         if (newMajorMinorPatch || data.tags.build !== build) {
@@ -192,7 +203,7 @@ for the format of the version.json5 file.
         }
         break
 
-      case 'full':
+      case "full":
         build = StampVerTool.getFullDate(now)
 
         if (newMajorMinorPatch || data.tags.build !== build) {
@@ -203,7 +214,7 @@ for the format of the version.json5 file.
         }
         break
 
-      case 'incr':
+      case "incr":
         if (newMajorMinorPatch) {
           data.tags.build = 0
         } else {
@@ -213,19 +224,23 @@ for the format of the version.json5 file.
         break
 
       default:
-        this.log.error(`Unknown build number format ${data.buildFormat}. Must be 'jdate', 'full' or 'incr'`)
+        this.log.error(
+          `Unknown build number format ${
+            data.buildFormat
+          }. Must be 'jdate', 'full' or 'incr'`
+        )
         return -1
     }
 
-    this.log.info('Tags are:')
+    this.log.info("Tags are:")
 
-    Object.entries(data.tags).forEach(arr => {
+    Object.entries(data.tags).forEach((arr) => {
       this.log.info(`  ${arr[0]}='${arr[1]}'`)
     })
 
     const versionDirname = path.dirname(versionFn)
 
-    this.log.info(`${args.update ? 'Updating' : 'Checking'} file list:`)
+    this.log.info(`${args.update ? "Updating" : "Checking"} file list:`)
 
     for (let filename of data.filenames) {
       let match = false
@@ -249,24 +264,38 @@ for the format of the version.json5 file.
           }
 
           if (args.update) {
-            await util.promisify(fs.writeFile)(filename, StampVerTool.replaceTags(fileType.write, data.tags))
+            await util.promisify(fs.writeFile)(
+              filename,
+              StampVerTool.replaceTags(fileType.write, data.tags)
+            )
           }
         } else {
           if (fs.existsSync(fullFilename)) {
             const updates = fileType.updates || [fileType.update]
-            let content = await util.promisify(fs.readFile)(fullFilename, { encoding: 'utf8' })
+            let content = await util.promisify(fs.readFile)(fullFilename, {
+              encoding: "utf8",
+            })
 
-            updates.forEach(update => {
+            updates.forEach((update) => {
               let found = false
               let replace = StampVerTool.replaceTags(update.replace, data.tags)
-              let search = new XRegExp(update.search, 'm')
-              content = XRegExp.replace(content, search, (match) => {
-                found = true
-                return StampVerTool.replaceTags(replace, match)
-              }, 'one')
+              let search = new XRegExp(update.search, "m")
+              content = XRegExp.replace(
+                content,
+                search,
+                (match) => {
+                  found = true
+                  return StampVerTool.replaceTags(replace, match)
+                },
+                "one"
+              )
 
               if (!found) {
-                this.log.warning(`File type '${fileType.name}' update '${update.search}' did not match anything`)
+                this.log.warning(
+                  `File type '${fileType.name}' update '${
+                    update.search
+                  }' did not match anything`
+                )
               }
             })
 
@@ -291,7 +320,10 @@ for the format of the version.json5 file.
     }
 
     if (args.update) {
-      await util.promisify(fs.writeFile)(versionFn, JSON5.stringify(data, null, '  '))
+      await util.promisify(fs.writeFile)(
+        versionFn,
+        JSON5.stringify(data, null, "  ")
+      )
     }
 
     return 0
