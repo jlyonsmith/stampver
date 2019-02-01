@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-'use strict';
+"use strict";
 
-var _StampVerTool = require('./StampVerTool');
+var _StampVerTool = require("./StampVerTool");
 
-var _chalk = require('chalk');
+var _chalk = require("chalk");
 
 var _chalk2 = _interopRequireDefault(_chalk);
 
@@ -12,10 +12,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 const log = {
   info: console.info,
   error: function () {
-    console.error(_chalk2.default.red('error:', [...arguments].join(' ')));
+    console.error(_chalk2.default.red("error:", [...arguments].join(" ")));
   },
   warning: function () {
-    console.error(_chalk2.default.yellow('warning:', [...arguments].join(' ')));
+    console.error(_chalk2.default.yellow("warning:", [...arguments].join(" ")));
   }
 };
 

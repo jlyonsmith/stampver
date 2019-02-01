@@ -1,7 +1,5 @@
 import { StampVerTool } from "./StampVerTool"
 import tmp from "tmp"
-import fs from "fs"
-import util from "util"
 
 let tmpDirObj = null
 

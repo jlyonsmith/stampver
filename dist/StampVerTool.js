@@ -1,41 +1,41 @@
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.StampVerTool = undefined;
 
-var _minimist = require('minimist');
+var _minimist = require("minimist");
 
 var _minimist2 = _interopRequireDefault(_minimist);
 
-var _fs = require('fs');
+var _fs = require("fs");
 
 var _fs2 = _interopRequireDefault(_fs);
 
-var _path = require('path');
+var _path = require("path");
 
 var _path2 = _interopRequireDefault(_path);
 
-var _json = require('json5');
+var _json = require("json5");
 
 var _json2 = _interopRequireDefault(_json);
 
-var _version = require('./version');
+var _version = require("./version");
 
-var _xregexp = require('xregexp');
+var _xregexp = require("xregexp");
 
 var _xregexp2 = _interopRequireDefault(_xregexp);
 
-var _minimatch = require('minimatch');
+var _minimatch = require("minimatch");
 
 var _minimatch2 = _interopRequireDefault(_minimatch);
 
-var _util = require('util');
+var _util = require("util");
 
 var _util2 = _interopRequireDefault(_util);
 
-var _momentTimezone = require('moment-timezone');
+var _momentTimezone = require("moment-timezone");
 
 var _momentTimezone2 = _interopRequireDefault(_momentTimezone);
 
@@ -51,12 +51,12 @@ class StampVerTool {
     let dir = process.cwd();
 
     while (dir.length !== 0) {
-      const filename = _path2.default.join(dir, 'version.json5');
+      const filename = _path2.default.join(dir, "version.json5");
 
       if (_fs2.default.existsSync(filename)) {
         return filename;
       } else {
-        dir = dir.substring(0, dir.lastIndexOf('/'));
+        dir = dir.substring(0, dir.lastIndexOf("/"));
       }
     }
 
@@ -72,8 +72,8 @@ class StampVerTool {
   }
 
   static replaceTags(str, tags) {
-    const tagPrefix = '${';
-    const tagSuffix = '}';
+    const tagPrefix = "${";
+    const tagSuffix = "}";
 
     for (let i = str.length - 1; i != -1;) {
       const tagEnd = str.lastIndexOf(tagSuffix, i);
@@ -91,7 +91,7 @@ class StampVerTool {
       const key = str.substring(tagStart + tagPrefix.length, tagEnd);
       const tag = tags[key];
 
-      if (typeof tag !== 'undefined') {
+      if (typeof tag !== "undefined") {
         str = str.substring(0, tagStart) + tag + str.substring(tagEnd + tagSuffix.length);
       }
 
@@ -102,15 +102,15 @@ class StampVerTool {
 
   async run(argv) {
     const options = {
-      string: ['increment'],
-      boolean: ['help', 'version', 'update', 'sequence'],
+      string: ["increment"],
+      boolean: ["help", "version", "update", "sequence"],
       alias: {
-        'u': 'update',
-        'i': 'increment',
-        's': 'sequence'
+        u: "update",
+        i: "increment",
+        s: "sequence"
       },
       default: {
-        'increment': 'none'
+        increment: "none"
       }
     };
     let args = (0, _minimist2.default)(argv, options);
@@ -147,7 +147,7 @@ for the format of the version.json5 file.
       return 0;
     }
 
-    let versionFn = args['_'].length > 0 ? args['_'][0] : null;
+    let versionFn = args["_"].length > 0 ? args["_"][0] : null;
 
     if (versionFn && !_fs2.default.existSync(versionFn)) {
       this.log.error(`Unable to find file '${versionFn}'`);
@@ -172,7 +172,9 @@ for the format of the version.json5 file.
 
     let data = null;
     try {
-      const json5 = await _util2.default.promisify(_fs2.default.readFile)(versionFn, { encoding: 'utf8' });
+      const json5 = await _util2.default.promisify(_fs2.default.readFile)(versionFn, {
+        encoding: "utf8"
+      });
       data = _json2.default.parse(json5);
     } catch (error) {
       this.log.error(`'${versionFn}': ${error.message}`);
@@ -186,21 +188,21 @@ for the format of the version.json5 file.
       this.log.warning("No 'tz' value set - using local time zone");
       now = (0, _momentTimezone2.default)();
     }
-    const newMajorMinorPatch = args.increment !== 'none';
+    const newMajorMinorPatch = args.increment !== "none";
     let build;
 
     if (newMajorMinorPatch) {
       switch (args.increment) {
-        case 'major':
+        case "major":
           data.tags.major += 1;
           data.tags.minor = 0;
           data.tags.patch = 0;
           break;
-        case 'minor':
+        case "minor":
           data.tags.minor += 1;
           data.tags.patch = 0;
           break;
-        case 'patch':
+        case "patch":
           data.tags.patch += 1;
           break;
       }
@@ -214,7 +216,7 @@ for the format of the version.json5 file.
     }
 
     switch (data.buildFormat) {
-      case 'jdate':
+      case "jdate":
         build = StampVerTool.getJDate(now, data.startYear);
 
         if (newMajorMinorPatch || data.tags.build !== build) {
@@ -225,7 +227,7 @@ for the format of the version.json5 file.
         }
         break;
 
-      case 'full':
+      case "full":
         build = StampVerTool.getFullDate(now);
 
         if (newMajorMinorPatch || data.tags.build !== build) {
@@ -236,7 +238,7 @@ for the format of the version.json5 file.
         }
         break;
 
-      case 'incr':
+      case "incr":
         if (newMajorMinorPatch) {
           data.tags.build = 0;
         } else {
@@ -250,7 +252,7 @@ for the format of the version.json5 file.
         return -1;
     }
 
-    this.log.info('Tags are:');
+    this.log.info("Tags are:");
 
     Object.entries(data.tags).forEach(arr => {
       this.log.info(`  ${arr[0]}='${arr[1]}'`);
@@ -258,7 +260,7 @@ for the format of the version.json5 file.
 
     const versionDirname = _path2.default.dirname(versionFn);
 
-    this.log.info(`${args.update ? 'Updating' : 'Checking'} file list:`);
+    this.log.info(`${args.update ? "Updating" : "Checking"} file list:`);
 
     for (let filename of data.filenames) {
       let match = false;
@@ -287,16 +289,18 @@ for the format of the version.json5 file.
         } else {
           if (_fs2.default.existsSync(fullFilename)) {
             const updates = fileType.updates || [fileType.update];
-            let content = await _util2.default.promisify(_fs2.default.readFile)(fullFilename, { encoding: 'utf8' });
+            let content = await _util2.default.promisify(_fs2.default.readFile)(fullFilename, {
+              encoding: "utf8"
+            });
 
             updates.forEach(update => {
               let found = false;
               let replace = StampVerTool.replaceTags(update.replace, data.tags);
-              let search = new _xregexp2.default(update.search, 'm');
+              let search = new _xregexp2.default(update.search, "m");
               content = _xregexp2.default.replace(content, search, match => {
                 found = true;
                 return StampVerTool.replaceTags(replace, match);
-              }, 'one');
+              }, "one");
 
               if (!found) {
                 this.log.warning(`File type '${fileType.name}' update '${update.search}' did not match anything`);
@@ -324,7 +328,7 @@ for the format of the version.json5 file.
     }
 
     if (args.update) {
-      await _util2.default.promisify(_fs2.default.writeFile)(versionFn, _json2.default.stringify(data, null, '  '));
+      await _util2.default.promisify(_fs2.default.writeFile)(versionFn, _json2.default.stringify(data, null, "  "));
     }
 
     return 0;
