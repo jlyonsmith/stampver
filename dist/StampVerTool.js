@@ -3,41 +3,25 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.StampVerTool = undefined;
+exports.StampVerTool = void 0;
 
-var _minimist = require("minimist");
+var _minimist = _interopRequireDefault(require("minimist"));
 
-var _minimist2 = _interopRequireDefault(_minimist);
+var _fs = _interopRequireDefault(require("fs"));
 
-var _fs = require("fs");
+var _path = _interopRequireDefault(require("path"));
 
-var _fs2 = _interopRequireDefault(_fs);
-
-var _path = require("path");
-
-var _path2 = _interopRequireDefault(_path);
-
-var _json = require("json5");
-
-var _json2 = _interopRequireDefault(_json);
+var _json = _interopRequireDefault(require("json5"));
 
 var _version = require("./version");
 
-var _xregexp = require("xregexp");
+var _xregexp = _interopRequireDefault(require("xregexp"));
 
-var _xregexp2 = _interopRequireDefault(_xregexp);
+var _minimatch = _interopRequireDefault(require("minimatch"));
 
-var _minimatch = require("minimatch");
+var _util = _interopRequireDefault(require("util"));
 
-var _minimatch2 = _interopRequireDefault(_minimatch);
-
-var _util = require("util");
-
-var _util2 = _interopRequireDefault(_util);
-
-var _momentTimezone = require("moment-timezone");
-
-var _momentTimezone2 = _interopRequireDefault(_momentTimezone);
+var _momentTimezone = _interopRequireDefault(require("moment-timezone"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -51,9 +35,9 @@ class StampVerTool {
     let dir = process.cwd();
 
     while (dir.length !== 0) {
-      const filename = _path2.default.join(dir, "version.json5");
+      const filename = _path.default.join(dir, "version.json5");
 
-      if (_fs2.default.existsSync(filename)) {
+      if (_fs.default.existsSync(filename)) {
         return filename;
       } else {
         dir = dir.substring(0, dir.lastIndexOf("/"));
@@ -97,6 +81,7 @@ class StampVerTool {
 
       i = tagStart - 1;
     }
+
     return str;
   }
 
@@ -113,7 +98,7 @@ class StampVerTool {
         increment: "none"
       }
     };
-    let args = (0, _minimist2.default)(argv, options);
+    let args = (0, _minimist.default)(argv, options);
 
     if (args.help) {
       this.log.info(`
@@ -149,7 +134,7 @@ for the format of the version.json5 file.
 
     let versionFn = args["_"].length > 0 ? args["_"][0] : null;
 
-    if (versionFn && !_fs2.default.existSync(versionFn)) {
+    if (versionFn && !_fs.default.existSync(versionFn)) {
       this.log.error(`Unable to find file '${versionFn}'`);
       return -1;
     }
@@ -161,33 +146,35 @@ for the format of the version.json5 file.
       return -1;
     }
 
-    versionFn = _path2.default.resolve(versionFn);
+    versionFn = _path.default.resolve(versionFn);
 
-    if (this.versionFn && !_fs2.default.existsSync(this.versionFn)) {
+    if (this.versionFn && !_fs.default.existsSync(this.versionFn)) {
       this.log.error(`File '${this.versionFn}' does not exist`);
       return -1;
     }
 
     this.log.info(`Version file is '${versionFn}''`);
-
     let data = null;
+
     try {
-      const json5 = await _util2.default.promisify(_fs2.default.readFile)(versionFn, {
+      const json5 = await _util.default.promisify(_fs.default.readFile)(versionFn, {
         encoding: "utf8"
       });
-      data = _json2.default.parse(json5);
+      data = _json.default.parse(json5);
     } catch (error) {
       this.log.error(`'${versionFn}': ${error.message}`);
       return -1;
     }
 
     let now = null;
+
     if (data.tags.tz) {
-      now = (0, _momentTimezone2.default)().tz(data.tags.tz);
+      now = (0, _momentTimezone.default)().tz(data.tags.tz);
     } else {
       this.log.warning("No 'tz' value set - using local time zone");
-      now = (0, _momentTimezone2.default)();
+      now = (0, _momentTimezone.default)();
     }
+
     const newMajorMinorPatch = args.increment !== "none";
     let build;
 
@@ -198,10 +185,12 @@ for the format of the version.json5 file.
           data.tags.minor = 0;
           data.tags.patch = 0;
           break;
+
         case "minor":
           data.tags.minor += 1;
           data.tags.patch = 0;
           break;
+
         case "patch":
           data.tags.patch += 1;
           break;
@@ -210,7 +199,6 @@ for the format of the version.json5 file.
 
     if (args.sequence) {
       let sequence = data.tags.sequence || 0;
-
       sequence += 1;
       data.tags.sequence = sequence;
     }
@@ -225,6 +213,7 @@ for the format of the version.json5 file.
         } else {
           data.tags.revision += 1;
         }
+
         break;
 
       case "full":
@@ -236,6 +225,7 @@ for the format of the version.json5 file.
         } else {
           data.tags.revision += 1;
         }
+
         break;
 
       case "incr":
@@ -244,6 +234,7 @@ for the format of the version.json5 file.
         } else {
           data.tags.build += 1;
         }
+
         data.tags = revision = 0;
         break;
 
@@ -253,51 +244,52 @@ for the format of the version.json5 file.
     }
 
     this.log.info("Tags are:");
-
     Object.entries(data.tags).forEach(arr => {
       this.log.info(`  ${arr[0]}='${arr[1]}'`);
     });
 
-    const versionDirname = _path2.default.dirname(versionFn);
+    const versionDirname = _path.default.dirname(versionFn);
 
     this.log.info(`${args.update ? "Updating" : "Checking"} file list:`);
 
     for (let filename of data.filenames) {
       let match = false;
-      const fullFilename = _path2.default.resolve(_path2.default.join(versionDirname, filename));
+
+      const fullFilename = _path.default.resolve(_path.default.join(versionDirname, filename));
 
       this.log.info(`  ${fullFilename}`);
 
       for (let fileType of data.fileTypes) {
-        if (!(0, _minimatch2.default)(filename, fileType.glob, { dot: true })) {
+        if (!(0, _minimatch.default)(filename, fileType.glob, {
+          dot: true
+        })) {
           continue;
         }
 
         match = true;
 
         if (fileType.write) {
-          const dirname = _path2.default.dirname(fullFilename);
+          const dirname = _path.default.dirname(fullFilename);
 
-          if (!_fs2.default.existsSync(dirname)) {
+          if (!_fs.default.existsSync(dirname)) {
             this.log.error(`Directory '${dirname}' does not exist`);
             return -1;
           }
 
           if (args.update) {
-            await _util2.default.promisify(_fs2.default.writeFile)(filename, StampVerTool.replaceTags(fileType.write, data.tags));
+            await _util.default.promisify(_fs.default.writeFile)(filename, StampVerTool.replaceTags(fileType.write, data.tags));
           }
         } else {
-          if (_fs2.default.existsSync(fullFilename)) {
+          if (_fs.default.existsSync(fullFilename)) {
             const updates = fileType.updates || [fileType.update];
-            let content = await _util2.default.promisify(_fs2.default.readFile)(fullFilename, {
+            let content = await _util.default.promisify(_fs.default.readFile)(fullFilename, {
               encoding: "utf8"
             });
-
             updates.forEach(update => {
               let found = false;
               let replace = StampVerTool.replaceTags(update.replace, data.tags);
-              let search = new _xregexp2.default(update.search, "m");
-              content = _xregexp2.default.replace(content, search, match => {
+              let search = new _xregexp.default(update.search, "m");
+              content = _xregexp.default.replace(content, search, match => {
                 found = true;
                 return StampVerTool.replaceTags(replace, match);
               }, "one");
@@ -308,7 +300,7 @@ for the format of the version.json5 file.
             });
 
             if (args.update) {
-              await _util2.default.promisify(_fs2.default.writeFile)(fullFilename, content);
+              await _util.default.promisify(_fs.default.writeFile)(fullFilename, content);
             }
           } else {
             this.log.error(`File '${fullFilename}' does not exist to update`);
@@ -328,11 +320,13 @@ for the format of the version.json5 file.
     }
 
     if (args.update) {
-      await _util2.default.promisify(_fs2.default.writeFile)(versionFn, _json2.default.stringify(data, null, "  "));
+      await _util.default.promisify(_fs.default.writeFile)(versionFn, _json.default.stringify(data, null, "  "));
     }
 
     return 0;
   }
+
 }
+
 exports.StampVerTool = StampVerTool;
 //# sourceMappingURL=StampVerTool.js.map
