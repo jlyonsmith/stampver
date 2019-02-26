@@ -1,15 +1,17 @@
 import { StampVerTool } from "./StampVerTool"
-import tmp from "tmp"
+import tmp from "tmp-promise"
 
+const toolName = "stampver"
 let tmpDirObj = null
 
-beforeAll(() => {
-  tmpDirObj = tmp.dirSync()
+beforeAll(async (done) => {
+  tmpDirObj = await tmp.dir()
+  done()
 })
 
 afterAll(() => {
   if (tmpDirObj) {
-    tmpDirObj.removeCallback()
+    tmpDirObj.cleanup()
   }
 })
 
@@ -30,24 +32,24 @@ function getOutput(fn) {
   }
 }
 
-test("test help", (done) => {
+test("--help", async (done) => {
   const mockLog = getMockLog()
-  const tool = new StampVerTool(mockLog)
+  const tool = new StampVerTool(toolName, mockLog)
 
-  return tool.run(["--help"]).then((exitCode) => {
-    expect(exitCode).toBe(0)
-    expect(getOutput(mockLog.info)).toEqual(expect.stringContaining("--help"))
-    done()
-  })
+  const exitCode = await tool.run(["--help"])
+  expect(exitCode).toBe(0)
+  expect(getOutput(mockLog.info)).toEqual(expect.stringContaining("--help"))
+  done()
 })
 
-test("test version", (done) => {
+test("--version", async (done) => {
   const mockLog = getMockLog()
-  const tool = new StampVerTool(mockLog)
+  const tool = new StampVerTool(toolName, mockLog)
+  const exitCode = await tool.run(["--version"])
 
-  return tool.run(["--version"]).then((exitCode) => {
-    expect(exitCode).toBe(0)
-    expect(getOutput(mockLog.info)).toEqual(expect.stringMatching(/^v/))
-    done()
-  })
+  expect(exitCode).toBe(0)
+  expect(getOutput(mockLog.info)).toEqual(
+    expect.stringMatching(/^\d+\.\d+\.\d+\+\d+\.\d+/)
+  )
+  done()
 })

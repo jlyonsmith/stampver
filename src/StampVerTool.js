@@ -7,11 +7,13 @@ import XRegExp from "xregexp"
 import minimatch from "minimatch"
 import util from "util"
 import moment from "moment-timezone"
+import autobind from "autobind-decorator"
 
+@autobind
 export class StampVerTool {
-  constructor(log) {
+  constructor(name, log) {
+    this.name = name
     this.log = log
-    this.run = this.run.bind(this)
   }
 
   findVersionFile() {
@@ -91,18 +93,17 @@ export class StampVerTool {
 
     if (args.help) {
       this.log.info(`
-Version stamper
+Version stamping tool
 
-Usage: stampver [-u] [<version-file>]
+Usage: ${this.name} [-u] [<version-file>]
 
-<version-file> defaults to 'version.json5'.
+<version-file> defaults to 'version.json5' in the current directory.
 
 Will increment the build and/or revision number and search/replace all other version
 related information in a list of files.
 
-Searches for a 'version.json5' file in the current and parent directories and uses
-that as the root directory for project files. See https://github.com/jlyonsmith/stampver
-for the format of the version.json5 file.
+Uses the version file as the root directory for project files. See
+https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
 
 -u, --update            Actually do the file updates. Defaults to just reporting changes.
 -i, --increment <part>  Also increment one of major, minor or patch parts of version.
@@ -117,7 +118,7 @@ for the format of the version.json5 file.
     }
 
     if (args.version) {
-      this.log.info(`v${fullVersion}`)
+      this.log.info(`${fullVersion}`)
       return 0
     }
 

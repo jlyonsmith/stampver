@@ -12,12 +12,15 @@ const log = {
   },
 }
 
-const stampVer = new StampVerTool(log)
-stampVer
+const tool = new StampVerTool("stampver", log)
+tool
   .run(process.argv.slice(2))
   .then((exitCode) => {
     process.exitCode = exitCode
   })
   .catch((err) => {
+    if (tool.debug) {
+      console.log(err)
+    }
     log.error(err)
   })
