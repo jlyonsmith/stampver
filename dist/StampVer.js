@@ -16,10 +16,14 @@ const log = {
     console.error(_chalk.default.yellow("warning:", [...arguments].join(" ")));
   }
 };
-const stampVer = new _StampVerTool.StampVerTool(log);
-stampVer.run(process.argv.slice(2)).then(exitCode => {
+const tool = new _StampVerTool.StampVerTool("stampver", log);
+tool.run(process.argv.slice(2)).then(exitCode => {
   process.exitCode = exitCode;
 }).catch(err => {
+  if (tool.debug) {
+    console.log(err);
+  }
+
   log.error(err);
 });
 //# sourceMappingURL=stampver.js.map

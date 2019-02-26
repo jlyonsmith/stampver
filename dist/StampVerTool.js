@@ -23,12 +23,16 @@ var _util = _interopRequireDefault(require("util"));
 
 var _momentTimezone = _interopRequireDefault(require("moment-timezone"));
 
+var _autobindDecorator = _interopRequireDefault(require("autobind-decorator"));
+
+var _class;
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-class StampVerTool {
-  constructor(log) {
+let StampVerTool = (0, _autobindDecorator.default)(_class = class StampVerTool {
+  constructor(name, log) {
+    this.name = name;
     this.log = log;
-    this.run = this.run.bind(this);
   }
 
   findVersionFile() {
@@ -102,18 +106,17 @@ class StampVerTool {
 
     if (args.help) {
       this.log.info(`
-Version stamper
+Version stamping tool
 
-Usage: stampver [-u] [<version-file>]
+Usage: ${this.name} [-u] [<version-file>]
 
-<version-file> defaults to 'version.json5'.
+<version-file> defaults to 'version.json5' in the current directory.
 
 Will increment the build and/or revision number and search/replace all other version
 related information in a list of files.
 
-Searches for a 'version.json5' file in the current and parent directories and uses
-that as the root directory for project files. See https://github.com/jlyonsmith/stampver
-for the format of the version.json5 file.
+Uses the version file as the root directory for project files. See
+https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
 
 -u, --update            Actually do the file updates. Defaults to just reporting changes.
 -i, --increment <part>  Also increment one of major, minor or patch parts of version.
@@ -128,7 +131,7 @@ for the format of the version.json5 file.
     }
 
     if (args.version) {
-      this.log.info(`v${_version.fullVersion}`);
+      this.log.info(`${_version.fullVersion}`);
       return 0;
     }
 
@@ -326,7 +329,7 @@ for the format of the version.json5 file.
     return 0;
   }
 
-}
+}) || _class;
 
 exports.StampVerTool = StampVerTool;
 //# sourceMappingURL=StampVerTool.js.map
