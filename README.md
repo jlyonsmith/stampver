@@ -8,19 +8,19 @@ This approach also supports multi-language, multi-platform projects very well. F
 
 The tool is based around the following version numbers:
 
-- Major, minor, patch are numbers that increases by one for each major, minor or patch release.
-- Build is a number based on the current date in a sortable year, month, day order.
-- Revision is a number that increases by one for each build done on the build date.
-- Sequence is just a number that increases by one whenever you tell it too (mostly used by Android apps)
+- `major`, `minor` and `patch` are numbers that increase by one for each major, minor or patch release
+- `build` is a number based on the current date in a sortable year, month, day order
+- `revision` is a number that increases by one for each build done on the build date
+- `sequence` is just a number that increases by one whenever you tell it too (mostly used by Android apps)
 
 This means the tool supports [Semantic Versioning](https://semver.org/) out of the box, but it can also support other types of versioning.
 
-The tool works using a single `version.jso5` file in the root of your project.  In that file you place:
+The tool works using a single `version.json5` file in the root of your project.  In that file you place:
 
 1. Version information.
 2. Other information like copyrights, project starting years, etc..
 3. A list of files to update
-4. A list of regular expressions to search and replace versions in those files.
+4. A list of regular expression based search and replacements to use to update version numbers in the list of files.
 
 ## Getting Started
 
