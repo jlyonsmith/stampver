@@ -2,20 +2,29 @@
 
 ## Why Build This?
 
-This is a tool for updating version numbers.  It would be wonderful if project version information could be defined in just one file and then be accessed from everywhere, but unfortunately that is never the case for multi-platform projects.
+This is a tool for updating version numbers.  It allows you to keep your version numbers and version related information in a single file in the root of your project, and then easily generate all other files contain different bits of that information that are needed by your project and release process.
 
-There are two approaches to generating version information.
+This approach also supports multi-language, multi-platform projects very well. For example, a React Native project that includes Node.js, Swift and Java code targeting the web, iOS and Android.
 
-1. Generating version files that are then incorporated into projects builds.
-2. Searching and replacing version information where it appears in various types of project files.
+The tool is based around the following version numbers:
 
-This tool supports both of the above.  If your version information appears in a searchable text file, it can updated. Or, you can write version information to specific files.
+- Major, minor, patch are numbers that increases by one for each major, minor or patch release.
+- Build is a number based on the current date in a sortable year, month, day order.
+- Revision is a number that increases by one for each build done on the build date.
+- Sequence is just a number that increases by one whenever you tell it too (mostly used by Android apps)
 
-So if, for example, your project contains some NodeJS, C++, iOS and Android code, then you can generate or replace those version numbers in situ as needed using `stampver`.
+This means the tool supports [Semantic Versioning](https://semver.org/) out of the box, but it can also support other types of versioning.
 
-`npm version` provides version updating for the [npm](https://npmjs.org/) `package.json`, but not other types of project files. You can use `stampver` to easily update `package.json` files.
+The tool works using a single `version.jso5` file in the root of your project.  In that file you place:
+
+1. Version information.
+2. Other information like copyrights, project starting years, etc..
+3. A list of files to update
+4. A list of regular expressions to search and replace versions in those files.
 
 ## Getting Started
+
+### Installation
 
 Install it globally with:
 
@@ -29,9 +38,31 @@ Or, with Node 8.0 and above you can just run it with:
 npx stampver
 ```
 
-These instructions assume that you have the tool installed globally for simplicity.
+### Running the tool
 
-Create a basic `version.json5` file in the root of your project tree:
+To run tool the and check everything is set up correctly run:
+
+```Shell
+stampver
+```
+
+To actually do an update of the build and/or revision number do:
+
+```Shell
+stampver --update
+```
+
+This will rewrite all the files specified in the `version.json5` file.  To increment the major, minor or patch number do:
+
+```Shell
+stampver --update --increment patch
+```
+
+See `--help` for more options and `--version` for, well, the version number.
+
+## `version.json5` File Format
+
+Here is an example `version.json5` file which should be placed in the root of your project tree:
 
 ```JSON5
 {
@@ -47,6 +78,7 @@ Create a basic `version.json5` file in the root of your project tree:
     patch: 1,
     build: 20171005,
     revision: 0,
+    sequence: 1,
     tz: "America/Los_Angeles",
     startYear: "2017",
     company: "My Company",
@@ -84,49 +116,11 @@ Create a basic `version.json5` file in the root of your project tree:
 }
 ```
 
-This file isn't yet valid, so read the next section for figure out how to set it up.  Also, you can look at this project in [GitHub](https://github.com/jlyonsmith/stampver) to see how things are set up there.
-
-## Usage
-
-This tool assumes you are using [Semantic Versioning](http://semver.org/).  It could be used with other versioning schemes that know about the following version numbers:
-
-- `major` for incompatible changes
-- `minor` for added functionality with backward compatibility
-- `patch` for backwards compatible bug fixes
-- `build` for daily builds
-- `revision` for revision to daily builds
-
-The latter two values are used for pre-release versions and for internal build tracking. Each value is an integer.
-
-So a semantic version using the above would look like `major.minor.patch`.  A _pre-release_, _internal_ or _full_ version number might look like `major.minor.patch-build.revision`.
-
-To run tool the and check everything is set up correctly run:
-
-```Shell
-stampver
-```
-
-To actually do an update of the build and/or revision number do:
-
-```Shell
-stampver --update
-```
-
-This will rewrite all the files specified in the `version.json5` file.  To increment the major, minor or patch number do:
-
-```Shell
-stampver --update --increment patch
-```
-
-See `--help` for more options and `--version` for, well, the version number.
-
-## `version.json5` File Format
-
 The file has the following sections.
 
 ### `filenames`
 
-An array of files names. Use relative paths rooted at the location of the `version.json5` file.  
+An array of files names. Use relative paths rooted at the location of the `version.json5` file.
 
 ### `buildFormat`
 
@@ -163,7 +157,7 @@ Within the `replace` tag you can use any values listed in `tags` and any named m
 
 Here is the JSON5 for some common file types that you can use as starting points for your projects:
 
-```JSON5
+```json5
 {
   name: "Javascript File",
   glob: "**/version.js",
@@ -180,7 +174,7 @@ Here is the JSON5 for some common file types that you can use as starting points
 },
 ```
 
-```JSON5
+```json5
 {
   name: "Node Package",
   glob: "**/package.json",
@@ -191,7 +185,7 @@ Here is the JSON5 for some common file types that you can use as starting points
 },
 ```
 
-```JSON5
+```json5
 {
   name: "Commit tag file",
   glob: "**/*.tag.txt",
@@ -206,7 +200,7 @@ Here is the JSON5 for some common file types that you can use as starting points
 
 ## About
 
-`stampver` is written in ES6 Javascript using `babel` and built to target [NodeJS](https://nodejs.org/) v8 or above.
+`stampver` is written in ES2019 Javascript using `babel` and built to target [NodeJS](https://nodejs.org/) v8 or above.
 
 I've used [JSON5](http://json5.org/) for the version file format because it is easier to type and maintain.  However the file is rewritten each time version information is updated, so any embedded comments will be lost.
 
