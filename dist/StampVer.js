@@ -26,4 +26,4 @@ tool.run(process.argv.slice(2)).then(exitCode => {
 
   log.error(err);
 });
-//# sourceMappingURL=stampver.js.map
+//# sourceMappingURL=StampVer.js.map
