@@ -52,7 +52,7 @@ export class StampVerTool {
     ).toString()
   }
 
-  static replaceTags(str: string, tags): string {
+  static replaceTags(str: string, tags: Record<string, string>): string {
     const tagPrefix = "${"
     const tagSuffix = "}"
 

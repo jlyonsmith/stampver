@@ -13,7 +13,7 @@
     "start": "ts-node src/stampver.ts",
     "build": "rm -rf dist/* && tsc",
     "debug": "ts-node --inspect-brk src/stampver.ts",
-    "test": "ts-jest $* --coverage",
+    "test": "jest --coverage",
     "deploy": "npm publish --access public",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
