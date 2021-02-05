@@ -1,22 +1,26 @@
 import parseArgs from "minimist"
 import fs from "fs"
 import path from "path"
-import JSON5 from "json5"
+import JSON5 from "@johnls/json5"
 import { fullVersion } from "./version"
 import XRegExp from "xregexp"
 import minimatch from "minimatch"
 import util from "util"
-import moment from "moment-timezone"
-import autobind from "autobind-decorator"
+import { DateTime } from "luxon"
+import { Logger } from "./Logger"
 
-@autobind
 export class StampVerTool {
-  constructor(name, log) {
+  name: string
+  log: Logger
+  debug: boolean
+  versionFilename: string
+
+  constructor(name: string, log: Logger) {
     this.name = name
     this.log = log
   }
 
-  findVersionFile() {
+  findVersionFile(): string {
     let dir = process.cwd()
 
     while (dir.length !== 0) {
@@ -32,19 +36,23 @@ export class StampVerTool {
     return null
   }
 
-  static getFullDate(now) {
-    return now.year() * 10000 + (now.month() + 1) * 100 + now.date()
-  }
-
-  static getJDate(now, startYear) {
+  static getFullDate(dateTime: DateTime): string {
     return (
-      (now.year() - startYear + 1) * 10000 +
-      now.month() * 100 +
-      now.date()
+      dateTime.year * 10000 +
+      (dateTime.month + 1) * 100 +
+      dateTime.day
     ).toString()
   }
 
-  static replaceTags(str, tags) {
+  static getJDate(dateTime: DateTime, startYear: number): string {
+    return (
+      (dateTime.year - startYear + 1) * 10000 +
+      dateTime.month * 100 +
+      dateTime.day
+    ).toString()
+  }
+
+  static replaceTags(str: string, tags): string {
     const tagPrefix = "${"
     const tagSuffix = "}"
 
@@ -76,10 +84,10 @@ export class StampVerTool {
     return str
   }
 
-  async run(argv) {
+  async run(argv: string[]): Promise<0 | -1> {
     const options = {
       string: ["increment"],
-      boolean: ["help", "version", "update", "sequence"],
+      boolean: ["help", "version", "update", "sequence", "debug"],
       alias: {
         u: "update",
         i: "increment",
@@ -89,7 +97,7 @@ export class StampVerTool {
         increment: "none",
       },
     }
-    let args = parseArgs(argv, options)
+    const args = parseArgs(argv, options)
 
     if (args.help) {
       this.log.info(`
@@ -113,6 +121,7 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
                         number.
 --help                  Displays this help
 --version               Displays tool version
+--debug                 Get additional debugging information
 `)
       return 0
     }
@@ -122,51 +131,53 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
       return 0
     }
 
-    let versionFn = args["_"].length > 0 ? args["_"][0] : null
+    this.debug = args.debug
 
-    if (versionFn && !fs.existSync(versionFn)) {
-      this.log.error(`Unable to find file '${versionFn}'`)
+    let versionFilename = args["_"].length > 0 ? args["_"][0] : null
+
+    if (versionFilename && !fs.existsSync(versionFilename)) {
+      this.log.error(`Unable to find file '${versionFilename}'`)
       return -1
     }
 
-    versionFn = this.findVersionFile()
+    versionFilename = this.findVersionFile()
 
-    if (!versionFn) {
+    if (!versionFilename) {
       this.log.error(
         `Unable to find version.json5 file in this or parent directories`
       )
       return -1
     }
 
-    versionFn = path.resolve(versionFn)
+    versionFilename = path.resolve(versionFilename)
 
-    if (this.versionFn && !fs.existsSync(this.versionFn)) {
-      this.log.error(`File '${this.versionFn}' does not exist`)
+    if (this.versionFilename && !fs.existsSync(this.versionFilename)) {
+      this.log.error(`File '${this.versionFilename}' does not exist`)
       return -1
     }
 
-    this.log.info(`Version file is '${versionFn}''`)
+    this.log.info(`Version file is '${versionFilename}''`)
 
     let data = null
     try {
-      const json5 = await util.promisify(fs.readFile)(versionFn, {
+      const json5 = await util.promisify(fs.readFile)(versionFilename, {
         encoding: "utf8",
       })
       data = JSON5.parse(json5)
     } catch (error) {
-      this.log.error(`'${versionFn}': ${error.message}`)
+      this.log.error(`'${versionFilename}': ${error.message}`)
       return -1
     }
 
-    let now = null
+    let now: DateTime = null
+
     if (data.tags.tz) {
-      now = moment().tz(data.tags.tz)
+      now = DateTime.local().setZone(data.tags.tz)
     } else {
       this.log.warning("No 'tz' value set - using local time zone")
-      now = moment()
+      now = DateTime.local()
     }
     const newMajorMinorPatch = args.increment !== "none"
-    let build
 
     if (newMajorMinorPatch) {
       switch (args.increment) {
@@ -191,6 +202,8 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
       sequence += 1
       data.tags.sequence = sequence
     }
+
+    let build
 
     switch (data.buildFormat) {
       case "jdate":
@@ -221,14 +234,12 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
         } else {
           data.tags.build += 1
         }
-        data.tags = revision = 0
+        data.tags.revision = 0
         break
 
       default:
         this.log.error(
-          `Unknown build number format ${
-            data.buildFormat
-          }. Must be 'jdate', 'full' or 'incr'`
+          `Unknown build number format ${data.buildFormat}. Must be 'jdate', 'full' or 'incr'`
         )
         return -1
     }
@@ -239,17 +250,17 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
       this.log.info(`  ${arr[0]}='${arr[1]}'`)
     })
 
-    const versionDirname = path.dirname(versionFn)
+    const versionDirname = path.dirname(versionFilename)
 
     this.log.info(`${args.update ? "Updating" : "Checking"} file list:`)
 
-    for (let filename of data.filenames) {
+    for (const filename of data.filenames) {
       let match = false
       const fullFilename = path.resolve(path.join(versionDirname, filename))
 
       this.log.info(`  ${fullFilename}`)
 
-      for (let fileType of data.fileTypes) {
+      for (const fileType of data.fileTypes) {
         if (!minimatch(filename, fileType.glob, { dot: true })) {
           continue
         }
@@ -279,8 +290,11 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
 
             updates.forEach((update) => {
               let found = false
-              let replace = StampVerTool.replaceTags(update.replace, data.tags)
-              let search = new XRegExp(update.search, "m")
+              const replace = StampVerTool.replaceTags(
+                update.replace,
+                data.tags
+              )
+              const search = XRegExp(update.search, "m")
               content = XRegExp.replace(
                 content,
                 search,
@@ -293,9 +307,7 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
 
               if (!found) {
                 this.log.warning(
-                  `File type '${fileType.name}' update '${
-                    update.search
-                  }' did not match anything`
+                  `File type '${fileType.name}' update '${update.search}' did not match anything`
                 )
               }
             })
@@ -322,7 +334,7 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
 
     if (args.update) {
       await util.promisify(fs.writeFile)(
-        versionFn,
+        versionFilename,
         JSON5.stringify(data, null, "  ")
       )
     }
