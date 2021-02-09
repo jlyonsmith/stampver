@@ -1,6 +1,13 @@
 # Version Stamping Tool
 
-## Why Build This?
+## Goals
+
+Must be able to:
+
+- Look at version file and see the list of affected files and the current version information *clearly*
+- Fully customize version numbers and incrementing strategy
+- Reliably update any *text file* with new version information
+- Perform update-in-place, write-new and copy-in functions on files
 
 This is a tool for updating version numbers.  It allows you to keep your version numbers and version related information in a single file in the root of your project, and then easily generate all other files contain different bits of that information that are needed by your project and release process.
 

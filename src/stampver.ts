@@ -16,15 +16,22 @@ class ConsoleLogger implements Logger {
 }
 
 const log = new ConsoleLogger()
-const tool = new StampVerTool("stampver", log)
+const tool = new StampVerTool({ toolName: "stampver", log })
 tool
   .run(process.argv.slice(2))
   .then((exitCode) => {
     process.exitCode = exitCode
   })
-  .catch((err) => {
-    if (tool.debug) {
-      console.log(err)
+  .catch((error) => {
+    process.exitCode = 200
+
+    if (error) {
+      let message = error.message ?? ""
+
+      if (tool.debug) {
+        message += " (" + error.stack.substring(error.stack.indexOf("\n")) + ")"
+      }
+
+      log.error(message)
     }
-    log.error(err)
   })
