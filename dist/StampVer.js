@@ -18,16 +18,21 @@ class ConsoleLogger {
     }
 }
 const log = new ConsoleLogger();
-const tool = new StampVerTool_1.StampVerTool("stampver", log);
+const tool = new StampVerTool_1.StampVerTool({ toolName: "stampver", log });
 tool
     .run(process.argv.slice(2))
     .then((exitCode) => {
     process.exitCode = exitCode;
 })
-    .catch((err) => {
-    if (tool.debug) {
-        console.log(err);
+    .catch((error) => {
+    var _a;
+    process.exitCode = 200;
+    if (error) {
+        let message = (_a = error.message) !== null && _a !== void 0 ? _a : "";
+        if (tool.debug) {
+            message += " (" + error.stack.substring(error.stack.indexOf("\n")) + ")";
+        }
+        log.error(message);
     }
-    log.error(err);
 });
 //# sourceMappingURL=stampver.js.map

@@ -295,7 +295,7 @@ export class StampVerTool {
         try {
           return new this.vm.Script(node.value).runInContext(runContext)
         } catch (e) {
-          throw new ScriptError(`Bad script. ${e.message}`, node)
+          throw new ScriptError(`Bad script - ${e.message}`, node)
         }
       } else {
         return node.value
@@ -337,6 +337,10 @@ export class StampVerTool {
   }
 
   runOperation(operation: string, interpolator: any, scriptNode: any): void {
+    if (!operation) {
+      throw new Error("An operation argument must be specified")
+    }
+
     const { operations: operationsNode } = scriptNode.value
     const operationNode = operationsNode.value[operation]
 
@@ -347,7 +351,7 @@ export class StampVerTool {
       )
     }
 
-    interpolator(operationNode.value)
+    interpolator(operationNode)
   }
 
   async processTargets(
@@ -392,8 +396,9 @@ export class StampVerTool {
               search,
               (match) => {
                 found = true
-                runContext.before = match.before
-                runContext.after = match.after
+                // TODO: Parse from regexp
+                runContext.begin = match.begin
+                runContext.end = match.end
                 return interpolator(replaceNode)
               },
               "one"

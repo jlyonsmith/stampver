@@ -485,6 +485,11 @@ test("runOperation", () => {
 
   expect(tool.runOperation("incrMajor", (s) => s, scriptNode)).toBeUndefined()
 
+  // Missing operation arg
+  expect(() => tool.runOperation(undefined, (s) => s, scriptNode)).toThrowError(
+    Error
+  )
+
   // Missing operation
   expect(() => tool.runOperation("otherOp", (s) => s, scriptNode)).toThrowError(
     ScriptError

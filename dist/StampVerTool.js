@@ -14,100 +14,326 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StampVerTool = void 0;
 const minimist_1 = __importDefault(require("minimist"));
-const fs_1 = __importDefault(require("fs"));
+const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
+const process_1 = __importDefault(require("process"));
+const vm_1 = __importDefault(require("vm"));
 const json5_1 = __importDefault(require("@johnls/json5"));
 const version_1 = require("./version");
 const xregexp_1 = __importDefault(require("xregexp"));
-const minimatch_1 = __importDefault(require("minimatch"));
-const util_1 = __importDefault(require("util"));
-const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const luxon_1 = require("luxon");
+const ScriptError_1 = require("./ScriptError");
 class StampVerTool {
-    constructor(name, log) {
-        this.name = name;
-        this.log = log;
+    constructor(options) {
+        this.toolName = options.toolName;
+        this.log = options.log;
+        if (!this.toolName || !this.log) {
+            throw new Error("Must supply toolName and log");
+        }
+        this.fs = options.fs || promises_1.default;
+        this.path = options.path || path_1.default;
+        this.process = options.process || process_1.default;
+        this.vm = options.vm || vm_1.default;
+        this.XRegExp = options.XRegExp || xregexp_1.default;
     }
-    findVersionFile() {
-        let dir = process.cwd();
-        while (dir.length !== 0) {
-            const filename = path_1.default.join(dir, "version.json5");
-            if (fs_1.default.existsSync(filename)) {
-                return filename;
+    readScriptFile(fileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let content = null;
+            if (fileName) {
+                fileName = this.path.resolve(fileName);
+                content = yield this.fs.readFile(fileName);
             }
             else {
-                dir = dir.substring(0, dir.lastIndexOf("/"));
+                const baseName = "version.json5";
+                let dirName = this.process.cwd();
+                for (;;) {
+                    fileName = this.path.join(dirName, baseName);
+                    try {
+                        content = yield this.fs.readFile(fileName, {
+                            encoding: "utf8",
+                        });
+                        break;
+                    }
+                    catch (error) {
+                        if (error.code !== "ENOENT") {
+                            throw error;
+                        }
+                        // Try the parent directory
+                        dirName = dirName.substring(0, dirName.lastIndexOf("/"));
+                        if (dirName.length === 0) {
+                            break;
+                        }
+                    }
+                }
+                if (content === null) {
+                    throw new Error(`No '${baseName}' file found in current directory or parent directories`);
+                }
+            }
+            const scriptNode = json5_1.default.parse(content, { wantNodes: true });
+            const addFileName = (node) => {
+                node.filename = fileName;
+                switch (node.type) {
+                    case "null":
+                    case "numeric":
+                    case "boolean":
+                    case "string":
+                        break;
+                    case "object":
+                        for (const [_, value] of Object.entries(node.value)) {
+                            addFileName(value);
+                        }
+                        break;
+                    case "array":
+                        for (const value of node.value) {
+                            addFileName(value);
+                        }
+                        break;
+                }
+            };
+            addFileName(scriptNode);
+            return {
+                scriptNode,
+                scriptFileName: fileName,
+            };
+        });
+    }
+    validateScriptFile(scriptNode) {
+        const { vars: varsNode, calcVars: calcVarsNode, operations: operationsNode, targets: targetsNode, } = scriptNode.value;
+        // vars node
+        if (!varsNode || varsNode.type !== "object") {
+            throw new ScriptError_1.ScriptError("Must have a 'vars' object", varsNode !== null && varsNode !== void 0 ? varsNode : scriptNode);
+        }
+        for (const key of Object.keys(varsNode.value)) {
+            const varNode = varsNode.value[key];
+            if (key === "tz" && varNode.type !== "string") {
+                throw new ScriptError_1.ScriptError("'tz' variable must be a string", varNode);
+            }
+            else if (varNode.type !== "string" && varNode.type !== "numeric") {
+                throw new ScriptError_1.ScriptError(`'var' entry '${key}' must be a number or a string`, varNode);
             }
         }
-        return null;
-    }
-    static getFullDate(now) {
-        return now.year() * 10000 + (now.month() + 1) * 100 + now.date();
-    }
-    static getJDate(now, startYear) {
-        return ((now.year() - startYear + 1) * 10000 +
-            now.month() * 100 +
-            now.date()).toString();
-    }
-    static replaceTags(str, tags) {
-        const tagPrefix = "${";
-        const tagSuffix = "}";
-        for (let i = str.length - 1; i != -1;) {
-            const tagEnd = str.lastIndexOf(tagSuffix, i);
-            if (tagEnd <= 0) {
-                break;
+        // calcVars node
+        if (calcVarsNode) {
+            if (calcVarsNode.type !== "object") {
+                throw new ScriptError_1.ScriptError("'calcVars' must be an object", calcVarsNode);
             }
-            const tagStart = str.lastIndexOf(tagPrefix, tagEnd - 1);
-            if (tagStart < 0) {
-                break;
+            for (const key of Object.keys(calcVarsNode.value)) {
+                const calcVarNode = calcVarsNode.value[key];
+                if (calcVarNode.type !== "string") {
+                    throw new ScriptError_1.ScriptError(`'calcVars' entry '${key}' must be a string`, calcVarNode);
+                }
             }
-            const key = str.substring(tagStart + tagPrefix.length, tagEnd);
-            const tag = tags[key];
-            if (typeof tag !== "undefined") {
-                str = str.substring(0, tagStart) +
-                    tag +
-                    str.substring(tagEnd + tagSuffix.length);
-            }
-            i = tagStart - 1;
         }
-        return str;
+        // operations node
+        if (!operationsNode || operationsNode.type !== "object") {
+            throw new ScriptError_1.ScriptError("Must have an 'operations' object", operationsNode !== null && operationsNode !== void 0 ? operationsNode : scriptNode);
+        }
+        for (const key of Object.keys(operationsNode.value)) {
+            const operationNode = operationsNode.value[key];
+            if (operationNode.type !== "string") {
+                throw new ScriptError_1.ScriptError(`'operations' entry '${key}' must be a string`, operationNode);
+            }
+        }
+        // targets node
+        if (!targetsNode ||
+            targetsNode.type !== "array" ||
+            targetsNode.value.length === 0) {
+            throw new ScriptError_1.ScriptError("Must have a non-zero 'targets' array", targetsNode !== null && targetsNode !== void 0 ? targetsNode : scriptNode);
+        }
+        for (const key of Object.keys(targetsNode.value)) {
+            const targetNode = targetsNode.value[key];
+            if (targetNode.type !== "object") {
+                throw new ScriptError_1.ScriptError(`'targets' entry '${key}' must be an object`, targetNode);
+            }
+            const { description: descriptionNode, files: filesNode, action: actionNode, } = targetNode.value;
+            if (!descriptionNode || descriptionNode.type !== "string") {
+                throw new ScriptError_1.ScriptError("Target must have a 'description' string", targetsNode);
+            }
+            if (!filesNode ||
+                filesNode.type !== "array" ||
+                filesNode.value.length === 0) {
+                throw new ScriptError_1.ScriptError("Target must have a non-zero 'files' array", filesNode !== null && filesNode !== void 0 ? filesNode : targetsNode);
+            }
+            if (!actionNode || actionNode.type !== "object") {
+                throw new ScriptError_1.ScriptError("Target must have an 'action' object", targetsNode);
+            }
+            const { updates: updatesNode, write: writeNode, copyFrom: copyFromNode, } = actionNode.value;
+            if (updatesNode) {
+                if (updatesNode.type !== "array" || updatesNode.value.length == 0) {
+                    throw new ScriptError_1.ScriptError("'updates' must be a non-zero length array", updatesNode);
+                }
+                for (const itemNode of updatesNode.value) {
+                    if (itemNode.type !== "object") {
+                        throw new ScriptError_1.ScriptError("'updates' entry must be an object", itemNode);
+                    }
+                    const { search: searchNode, replace: replaceNode } = itemNode.value;
+                    if (!(searchNode && searchNode.type === "string") ||
+                        !(replaceNode && replaceNode.type === "string")) {
+                        throw new ScriptError_1.ScriptError("'updates' item must have 'search' and 'replace' properties", itemNode);
+                    }
+                }
+            }
+            else if (writeNode) {
+                if (writeNode.type !== "string") {
+                    throw new ScriptError_1.ScriptError("'write' must be a string", writeNode);
+                }
+            }
+            else if (copyFromNode) {
+                if (copyFromNode.type !== "string") {
+                    throw new ScriptError_1.ScriptError("'copyFrom' must be a string", copyFromNode);
+                }
+            }
+            else {
+                throw new ScriptError_1.ScriptError("'action' must be 'updates', 'write' or 'copyFrom'", actionNode);
+            }
+        }
+    }
+    createRunContext(scriptNode) {
+        const { vars: varsNode, calcVars: calcVarsNode } = scriptNode.value;
+        const vars = {};
+        for (const key of Object.keys(varsNode.value)) {
+            const varNode = varsNode.value[key];
+            vars[key] = varNode.value;
+        }
+        const runContext = this.vm.createContext(Object.assign(Object.assign({}, vars), { env: Object.assign({}, this.process.env) }));
+        const interpolator = (node) => {
+            if (node.value.startsWith("{") && node.value.endsWith("}")) {
+                try {
+                    return new this.vm.Script(node.value).runInContext(runContext);
+                }
+                catch (e) {
+                    throw new ScriptError_1.ScriptError(`Bad script - ${e.message}`, node);
+                }
+            }
+            else {
+                return node.value;
+            }
+        };
+        const now = luxon_1.DateTime.local();
+        if (runContext.tz) {
+            now.setZone(runContext.tz);
+        }
+        runContext.now = {
+            year: now.year,
+            month: now.month,
+            day: now.day,
+            hour: now.hour,
+            minute: now.minute,
+            second: now.second,
+            zoneName: now.zoneName,
+        };
+        if (calcVarsNode) {
+            for (const key of Object.keys(calcVarsNode.value)) {
+                const calcVarNode = calcVarsNode.value[key];
+                if (runContext[key] !== undefined) {
+                    throw new ScriptError_1.ScriptError(`'calcVars' entry '${key}' would overwrite existing value '${runContext[key]}'`, calcVarNode);
+                }
+                runContext[key] = interpolator(calcVarNode);
+            }
+        }
+        return { runContext, interpolator };
+    }
+    runOperation(operation, interpolator, scriptNode) {
+        if (!operation) {
+            throw new Error("An operation argument must be specified");
+        }
+        const { operations: operationsNode } = scriptNode.value;
+        const operationNode = operationsNode.value[operation];
+        if (!operationNode) {
+            throw new ScriptError_1.ScriptError(`'operations' entry '${operation}' does not exist`, operationsNode);
+        }
+        interpolator(operationNode);
+    }
+    processTargets(scriptFileName, runContext, interpolator, scriptNode, update) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const rootDirName = this.path.dirname(scriptFileName);
+            const { targets: targetsNode } = scriptNode.value;
+            for (const targetNode of targetsNode.value) {
+                const { files: filesNode, description: descriptionNode, action: actionNode, } = targetNode.value;
+                const { updates: updatesNode, write: writeNode, copyFrom: copyFromNode, } = actionNode.value;
+                for (const fileNode of filesNode.value) {
+                    const fileName = this.path.join(rootDirName, fileNode.value);
+                    this.log.info(`  ${fileName} (${descriptionNode.value})`);
+                    if (updatesNode) {
+                        for (const updateNode of updatesNode.value) {
+                            const { search: searchNode, replace: replaceNode, } = updateNode.value;
+                            const search = this.XRegExp(searchNode.value, "m");
+                            let content = yield this.fs.readFile(fileName, { encoding: "utf8" });
+                            let found = false;
+                            content = this.XRegExp.replace(content, search, (match) => {
+                                found = true;
+                                // TODO: Parse from regexp
+                                runContext.begin = match.begin;
+                                runContext.end = match.end;
+                                return interpolator(replaceNode);
+                            }, "one");
+                            if (!found) {
+                                this.log.warning(`Search/replace on '${fileName}' did not match anything; check your search string`);
+                            }
+                            if (update) {
+                                yield this.fs.writeFile(fileName, content);
+                            }
+                        }
+                    }
+                    else if (writeNode && update) {
+                        yield this.fs.writeFile(fileName, interpolator(writeNode));
+                    }
+                    else if (copyFromNode && update) {
+                        yield this.fs.copyFile(interpolator(copyFromNode.value), fileName);
+                    }
+                }
+            }
+        });
+    }
+    updateScriptFile(scriptFileName, scriptNode, runContext) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const script = json5_1.default.simplify(scriptNode);
+            for (const key of Object.keys(script.vars)) {
+                script.vars[key] = runContext[key];
+            }
+            yield this.fs.writeFile(scriptFileName, json5_1.default.stringify(script, null, "  "));
+        });
     }
     run(argv) {
         return __awaiter(this, void 0, void 0, function* () {
             const options = {
                 string: ["increment"],
-                boolean: ["help", "version", "update", "sequence"],
+                boolean: ["help", "version", "update", "sequence", "debug", "input"],
                 alias: {
                     u: "update",
-                    i: "increment",
+                    i: "input",
                     s: "sequence",
                 },
                 default: {
                     increment: "none",
                 },
             };
-            let args = minimist_1.default(argv, options);
+            const args = minimist_1.default(argv, options);
             if (args.help) {
                 this.log.info(`
 Version stamping tool
 
-Usage: ${this.name} [-u] [<version-file>]
+Usage:
+        ${this.toolName} [-u | --update] [--debug] [-i | --input <file>] <operation>
+        ${this.toolName} [--help | --version]
 
-<version-file> defaults to 'version.json5' in the current directory.
+Performs version <operation> as specified in the project version file.  The exact
+operation is user defined but typically increments a version number.
 
-Will increment the build and/or revision number and search/replace all other version
-related information in a list of files.
+<version-file> defaults to 'version.json5' in the current or any parent directory.
 
-Uses the version file as the root directory for project files. See
-https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
+Uses the version file as the root directory for non-absolute files.
 
--u, --update            Actually do the file updates. Defaults to just reporting changes.
--i, --increment <part>  Also increment one of major, minor or patch parts of version.
-                        Defaults to none.  Updating major will reset minor and patch to zero,
-                        updating minor will just reset patch.
--s, --sequence          Increment the sequence number. Just a monotonically increasing
-                        number.
---help                  Displays this help
---version               Displays tool version
+See https://github.com/jlyonsmith/stampver for full documentation, including the
+format of the version.json5 file.
+
+Options:
+
+-i                Specify version file explicitly. Default is **/version.json5
+-u, --update      Actually do the file updates. Default is to dry run.
+--help            Displays this help
+--version         Displays tool version
+--debug           Give additional debugging information
 `);
                 return 0;
             }
@@ -115,161 +341,27 @@ https://github.com/jlyonsmith/stampver for the format of the version.json5 file.
                 this.log.info(`${version_1.fullVersion}`);
                 return 0;
             }
-            let versionFn = args["_"].length > 0 ? args["_"][0] : null;
-            if (versionFn && !fs_1.default.existsSync(versionFn)) {
-                this.log.error(`Unable to find file '${versionFn}'`);
-                return -1;
+            this.debug = args.debug;
+            const { scriptNode, scriptFileName } = yield this.readScriptFile(args.input);
+            this.log.info(`Using versioning script '${scriptFileName}'`);
+            this.validateScriptFile(scriptNode);
+            const { runContext, interpolator } = this.createRunContext(scriptNode);
+            if (!runContext.tz) {
+                this.log.warning("No 'tz' timezone value set; using local time zone '${now.zoneName}'");
             }
-            versionFn = this.findVersionFile();
-            if (!versionFn) {
-                this.log.error(`Unable to find version.json5 file in this or parent directories`);
-                return -1;
-            }
-            versionFn = path_1.default.resolve(versionFn);
-            if (this.versionFn && !fs_1.default.existsSync(this.versionFn)) {
-                this.log.error(`File '${this.versionFn}' does not exist`);
-                return -1;
-            }
-            this.log.info(`Version file is '${versionFn}''`);
-            let data = null;
-            try {
-                const json5 = yield util_1.default.promisify(fs_1.default.readFile)(versionFn, {
-                    encoding: "utf8",
-                });
-                data = json5_1.default.parse(json5);
-            }
-            catch (error) {
-                this.log.error(`'${versionFn}': ${error.message}`);
-                return -1;
-            }
-            let now = null;
-            if (data.tags.tz) {
-                now = moment_timezone_1.default().tz(data.tags.tz);
-            }
-            else {
-                this.log.warning("No 'tz' value set - using local time zone");
-                now = moment_timezone_1.default();
-            }
-            const newMajorMinorPatch = args.increment !== "none";
-            let build;
-            if (newMajorMinorPatch) {
-                switch (args.increment) {
-                    case "major":
-                        data.tags.major += 1;
-                        data.tags.minor = 0;
-                        data.tags.patch = 0;
-                        break;
-                    case "minor":
-                        data.tags.minor += 1;
-                        data.tags.patch = 0;
-                        break;
-                    case "patch":
-                        data.tags.patch += 1;
-                        break;
-                }
-            }
-            if (args.sequence) {
-                let sequence = data.tags.sequence || 0;
-                sequence += 1;
-                data.tags.sequence = sequence;
-            }
-            switch (data.buildFormat) {
-                case "jdate":
-                    build = StampVerTool.getJDate(now, data.startYear);
-                    if (newMajorMinorPatch || data.tags.build !== build) {
-                        data.tags.build = build;
-                        data.tags.revision = 0;
-                    }
-                    else {
-                        data.tags.revision += 1;
-                    }
-                    break;
-                case "full":
-                    build = StampVerTool.getFullDate(now);
-                    if (newMajorMinorPatch || data.tags.build !== build) {
-                        data.tags.build = build;
-                        data.tags.revision = 0;
-                    }
-                    else {
-                        data.tags.revision += 1;
-                    }
-                    break;
-                case "incr":
-                    if (newMajorMinorPatch) {
-                        data.tags.build = 0;
-                    }
-                    else {
-                        data.tags.build += 1;
-                    }
-                    data.tags.revision = 0;
-                    break;
-                default:
-                    this.log.error(`Unknown build number format ${data.buildFormat}. Must be 'jdate', 'full' or 'incr'`);
-                    return -1;
-            }
-            this.log.info("Tags are:");
-            Object.entries(data.tags).forEach((arr) => {
-                this.log.info(`  ${arr[0]}='${arr[1]}'`);
-            });
-            const versionDirname = path_1.default.dirname(versionFn);
-            this.log.info(`${args.update ? "Updating" : "Checking"} file list:`);
-            for (let filename of data.filenames) {
-                let match = false;
-                const fullFilename = path_1.default.resolve(path_1.default.join(versionDirname, filename));
-                this.log.info(`  ${fullFilename}`);
-                for (let fileType of data.fileTypes) {
-                    if (!minimatch_1.default(filename, fileType.glob, { dot: true })) {
-                        continue;
-                    }
-                    match = true;
-                    if (fileType.write) {
-                        const dirname = path_1.default.dirname(fullFilename);
-                        if (!fs_1.default.existsSync(dirname)) {
-                            this.log.error(`Directory '${dirname}' does not exist`);
-                            return -1;
-                        }
-                        if (args.update) {
-                            yield util_1.default.promisify(fs_1.default.writeFile)(filename, StampVerTool.replaceTags(fileType.write, data.tags));
-                        }
-                    }
-                    else {
-                        if (fs_1.default.existsSync(fullFilename)) {
-                            const updates = fileType.updates || [fileType.update];
-                            let content = yield util_1.default.promisify(fs_1.default.readFile)(fullFilename, {
-                                encoding: "utf8",
-                            });
-                            updates.forEach((update) => {
-                                let found = false;
-                                let replace = StampVerTool.replaceTags(update.replace, data.tags);
-                                let search = xregexp_1.default(update.search, "m");
-                                content = xregexp_1.default.replace(content, search, (match) => {
-                                    found = true;
-                                    return StampVerTool.replaceTags(replace, match);
-                                }, "one");
-                                if (!found) {
-                                    this.log.warning(`File type '${fileType.name}' update '${update.search}' did not match anything`);
-                                }
-                            });
-                            if (args.update) {
-                                yield util_1.default.promisify(fs_1.default.writeFile)(fullFilename, content);
-                            }
-                        }
-                        else {
-                            this.log.error(`File '${fullFilename}' does not exist to update`);
-                            return -1;
-                        }
-                    }
-                    if (match) {
-                        break;
-                    }
-                }
-                if (!match) {
-                    this.log.error(`File '${fullFilename}' has no matching file type`);
+            this.log.info("Variables are:");
+            for (const key of Object.keys(runContext)) {
+                if (key === "env" || key === "now") {
                     continue;
                 }
+                this.log.info(`  ${key}='${runContext[key]}'`);
             }
+            this.log.info(`${args.update ? "Updating" : "Dry run update of"} target files:`);
+            this.runOperation(args._[0], interpolator, scriptNode);
+            yield this.processTargets(scriptFileName, runContext, interpolator, scriptNode, args.update);
             if (args.update) {
-                yield util_1.default.promisify(fs_1.default.writeFile)(versionFn, json5_1.default.stringify(data, null, "  "));
+                this.log.info(`Writing ${scriptFileName}`);
+                yield this.updateScriptFile(scriptFileName, scriptNode, runContext);
             }
             return 0;
         });
