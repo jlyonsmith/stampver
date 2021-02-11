@@ -498,15 +498,6 @@ test("runOperation", () => {
 
 test("processTargets", async () => {
   const parseNodes = (script) => JSON5.parse(script, { wantNodes: true })
-  const XRegExp = function (search) {
-    return { value: search }
-  }
-
-  XRegExp.replace = (content, search, match) => {
-    if (search.value !== "notfound") {
-      match({ before: "", after: "" })
-    }
-  }
 
   Object.assign(container, {
     path: {
@@ -518,10 +509,22 @@ test("processTargets", async () => {
       readFile: () => "{}",
       copyFile: () => undefined,
     },
-    XRegExp,
+    XRegExp: (function () {
+      const f = function () {
+        return { xregexp: { captureNames: ["begin", "end"] } }
+      }
+      f.replace = function () {
+        this.replace = function (content, search, match) {
+          if (search.value !== "notfound") {
+            match({ begin: "", end: "" })
+          }
+        }
+      }
+      return f
+    })(),
   })
   // Happy path
-  const tool = new StampVerTool(container)
+  let tool = new StampVerTool(container)
   const scriptNode = parseNodes(`
   {
     targets: [
@@ -561,7 +564,7 @@ test("processTargets", async () => {
 
   await expect(
     tool.processTargets("/a/b/version.json", {}, interpolator, scriptNode, true)
-  )
+  ).resolves.toBeUndefined()
 
   // No update
   await expect(
@@ -572,7 +575,27 @@ test("processTargets", async () => {
       scriptNode,
       false
     )
-  )
+  ).resolves.toBeUndefined()
+
+  // Conflicting capture
+  container.XRegExp = function () {
+    return {
+      xregexp: {
+        captureNames: ["major", "minor"],
+      },
+    }
+  }
+  tool = new StampVerTool(container)
+
+  await expect(
+    tool.processTargets(
+      "/a/b/version.json",
+      { major: 1, minor: 0 },
+      interpolator,
+      scriptNode,
+      false
+    )
+  ).rejects.toThrowError()
 })
 
 test("updateScriptFile", async () => {

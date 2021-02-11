@@ -388,6 +388,16 @@ export class StampVerTool {
               replace: replaceNode,
             } = updateNode.value
             const search = this.XRegExp(searchNode.value, "m")
+            const captureNames = search.xregexp.captureNames
+
+            captureNames.forEach((name) => {
+              if (runContext[name] !== undefined) {
+                throw new Error(
+                  `Capture name '${name}' conflicts with existing variable`
+                )
+              }
+            })
+
             let content = await this.fs.readFile(fileName, { encoding: "utf8" })
             let found = false
 
@@ -396,9 +406,7 @@ export class StampVerTool {
               search,
               (match) => {
                 found = true
-                // TODO: Parse from regexp
-                runContext.begin = match.begin
-                runContext.end = match.end
+                captureNames.forEach((name) => (runContext[name] = match[name]))
                 return interpolator(replaceNode)
               },
               "one"
@@ -409,6 +417,8 @@ export class StampVerTool {
                 `Search/replace on '${fileName}' did not match anything; check your search string`
               )
             }
+
+            captureNames.forEach((name) => (runContext[name] = undefined))
 
             if (update) {
               await this.fs.writeFile(fileName, content)
