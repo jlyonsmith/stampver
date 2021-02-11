@@ -1,214 +1,128 @@
 # Version Stamping Tool
 
-## Goals
+## Overview
 
-Must be able to:
+This is a tool for updating version information in many types of software projects.  It stores version information in a JSON file at the root of the project. The file also contains information on how to update the various files within the project that contain version information.  This version file completely specifies how versioning works in the project and can be fully costomized. The tool has no opinion on how you do your versioning.
+
+For this project, we had the following goals.  It must be able to:
 
 - Look at version file and see the list of affected files and the current version information *clearly*
-- Fully customize version numbers and incrementing strategy
+- Be flexible enough to fully customize version numbers and update strategy
 - Reliably update any *text file* with new version information
 - Perform update-in-place, write-new and copy-in functions on files
 
-This is a tool for updating version numbers.  It allows you to keep your version numbers and version related information in a single file in the root of your project, and then easily generate all other files contain different bits of that information that are needed by your project and release process.
+The tool supports [Semantic Versioning](https://semver.org/) easily, but it can also support other the many other types of versioning strategies in use.
 
-This approach also supports multi-language, multi-platform projects very well. For example, a React Native project that includes Node.js, Swift and Java code targeting the web, iOS and Android.
+The version file can also contain other arbitrary and useful data such as copyright information and project names.
 
-The tool is based around the following version numbers:
-
-- `major`, `minor` and `patch` are numbers that increase by one for each major, minor or patch release
-- `build` is a number based on the current date in a sortable year, month, day order
-- `revision` is a number that increases by one for each build done on the build date
-- `sequence` is just a number that increases by one whenever you tell it too (mostly used by Android apps)
-
-This means the tool supports [Semantic Versioning](https://semver.org/) out of the box, but it can also support other types of versioning.
-
-The tool works using a single `version.json5` file in the root of your project.  In that file you place:
-
-1. Version information.
-2. Other information like copyrights, project starting years, etc..
-3. A list of files to update
-4. A list of regular expression based search and replacements to use to update version numbers in the list of files.
-
-## Getting Started
-
-### Installation
+## Installation
 
 Install it globally with:
 
 ```Shell
-npm install -g stampver
+npm install -g @johnls/stampver
 ```
 
-Or, with Node 8.0 and above you can just run it with:
+With Node 8.0 and above you can just run it with `npx`:
 
 ```Shell
-npx stampver
+npx @johnls/stampver ...
 ```
 
-### Running the tool
+## Usage
 
 To run tool the and check everything is set up correctly run:
 
 ```Shell
-stampver
+stampver --help
 ```
 
-To actually do an update of the build and/or revision number do:
+You'll need to create a `version.json5` file in the root of your project. See the next section on how to do this. Then you can do a dry run update by running:
 
 ```Shell
-stampver --update
+stampver <version-operation>
 ```
 
-This will rewrite all the files specified in the `version.json5` file.  To increment the major, minor or patch number do:
+where `version-operation` is something you define in your `version.json5`.  The program does the following:
 
-```Shell
-stampver --update --increment patch
-```
-
-See `--help` for more options and `--version` for, well, the version number.
+1. Read the `version.json5` file in
+2. Do any dynamic calculations of version information, such as generating a date based `build` value.
+3. Increment or do some other operation on the `vars` information as specified on the command line
+4. Update a list of files with the new version information using regular expression search & replace, or directly write files or copy specific files into place.
+5. Write out the `version.json5` file with updated `vars`
 
 ## `version.json5` File Format
 
-Here is an example `version.json5` file which should be placed in the root of your project tree:
+The file is in JSON5 format with an object at the root containing the following properties.  You can examine and copy this projects `version.json5` file for a starting point.
 
-```JSON5
-{
-  filenames: [
-    "file.qpr"
-    "src/file.abc",
-    "task/file.xyz",
-  ],
-  buildFormat: "full",
-  tags: {
-    major: 1,
-    minor: 0,
-    patch: 1,
-    build: 20171005,
-    revision: 0,
-    sequence: 1,
-    tz: "America/Los_Angeles",
-    startYear: "2017",
-    company: "My Company",
-    product: "myproject"
-  },
-  fileTypes: [
-    {
-      name: "File Type QPR",
-      glob: "**/file.qpr",
-      update: {
-        search: "...",
-        replace: "..."
-      }
-    },
-    {
-      name: "File Type ABC",
-      glob: "**/file.abc",
-      updates: [
-        {
-          search: "...",
-          replace: "..."
-        },
-        {
-          search: "...",
-          replace: "..."
-        }
-      ]
-    },
-    {
-      name: "File Type XYZ",
-      glob: "**/*.xyz",
-      write: "..."
-    }
-  ]
-}
-```
+### `vars`
 
-The file has the following sections.
+A list of strings containing version information.  `major`, `minor`, `patch`, `build` and `revision` are common but not required.
 
-### `filenames`
+## `calcVars`
 
-An array of files names. Use relative paths rooted at the location of the `version.json5` file.
+A list of interpolated strings that can calculate additional variables in the [run context](#run-context).
 
-### `buildFormat`
+A `now` variable is automaticall added to [run context](#run-context) containing `year`, `month`, `day`, `hour`, `minute` and `second` properties for the time the program is run.  The `tz` variable, if present in `vars`, must contain a [TZ database name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).  This will be used to localize the `now` variable.
 
-Format for the build number.  Can be:
+An `env` is automatically added containing a snapshot of `process.env`.
 
-- `full` - the build number is the current date at the given timezone in year/month/day order
-- `jdate` - the build number is 3 pairs of digits; the number of years since `startYear`, the month and the day. Keeps the build number under the size of a 16-bit integer value.
-- `incr` - the build number is simply an incremented number
+## `operations`
 
-### `tags`
+This is a list of scripts that modify the run context. Only one operation is run as specified on the command line.
 
-This is the set of tags for the project including the version information.  The following is the list of system managed tags.  All other tags are ignored and can be used by in `replace` strings.
+## `targets`
 
-- `major`, `minor`, `patch`, `build`, `revision` - as described above
-- `startYear` - the year the project was started, for use with `jdate` `build` value
-- `tz` - the timezone that should be used to generate a `full` `build` value.  See [MomentJS Timezone](https://momentjs.com/timezone/) for a full list of available timezones.
+This is an array of objects containing `files`, `description`, `action` properties. The files in the `files` array will all be updated. Any paths are relative to the `version.json5` file directory.
 
-All other values, such as `company` or `product` are user maintained and can be substituted into files as needed.
+`description` is only for informational purposes.
 
-### `fileTypes`
+There are 3 types of `action`
 
-This section describes the types of files that the can be listed in the `filenames` section.  A `fileType` consists of:
+### `updates`
 
-- `name` - For reporting
-- `glob` - To match the `filename`
-- `update` or `updates` - A single or array of `search`/`replace` pairs
-- `write` - The contents to write to a file.  The file will be created, but any directory given must exist.
+Updates is an array of objects. Each object contains `search` and `replace` fields.  There can be multple updates per target file.  The `search` string is a regular expression which can contain named matches. The `replace` string is a script that generates the replacement text if `search` matches.
 
-Within the `search` tag you can use any [XRegExp](http://xregexp.com/) search syntax, in particular named match groups, e.g. `(?<name>...)`  These will be available in the `replace` as `${name}`.  It is common to capture text surrounding the match as groups so they can be substituted back into the replacement string, e.g. `(?<begin>...)` and `(?<end>...)` translating to `${begin}` and `${end}`.
+### `write`
 
-Within the `replace` tag you can use any values listed in `tags` and any named match groups from the `search` expression.
+The `write` property is a script that generates the contents of the target file.
 
-## Common `fileTypes`
+### `copyFrom`
 
-Here is the JSON5 for some common file types that you can use as starting points for your projects:
+The `copyFrom` property is a script that generates the name of a file to copy from.
+
+## Run Context
+
+The `calcVars`, `operation`, `search`, `replace`, `write` and `copyFrom` fields allow you to specify a string or an *embedded JavaScript* code. Embedded code is specified by putting `{...}` around the _entire_ string.  For example:
 
 ```json5
 {
-  name: "Javascript File",
-  glob: "**/version.js",
-  updates: [
-    {
-      search: "^(?<begin>\\s*export\\s*const\\s*version\\s*=\\s*')\\d+\\.\\d+\\.\\d+(?<end>'\\s*)$",
-      replace: "${begin}${major}.${minor}.${patch}${end}"
-    },
-    {
-      search: "^(?<begin>\\s*export\\s*const\\s*fullVersion\\s*=\\s*')\\d+\\.\\d+\\.\\d+-\\d+\\.\\d+(?<end>'\\s*)$",
-      replace: "${begin}${major}.${minor}.${patch}-${build}.${revision}${end}"
-    }
-  ]
-},
-```
-
-```json5
-{
-  name: "Node Package",
-  glob: "**/package.json",
-  update: {
-    search: "^(?<begin> *\"version\" *: *\")\\d+\\.\\d+\\.\\d+(?<end>\" *, *)$",
-    replace: "${begin}${major}.${minor}.${patch}${end}"
+  operations: {
+    incrMajor: "{major += 1; minor = 0}",
   }
-},
-```
-
-```json5
-{
-  name: "Commit tag file",
-  glob: "**/*.tag.txt",
-  write: "v${major}.${minor}.${patch}"
-},
-{
-  name: "Commit tag description file",
-  glob: "**/*.desc.txt",
-  write: "Version ${major}.${minor}.${patch}-${build}.${revision}"
 }
 ```
+
+The `incrMajor` operation will add one to the `major` variable and set `minor` to zero.  These scripts will be executed, or *interpolated*, using the NodeJS [VM package](https://nodejs.org/api/vm.html) using a shared *global run context*. This context is created once and used throughout the script.  Scripts can access this run context and read or modify the values of earlier script actions. The context lifetime proceeds as follows:
+
+1. The run context is initialized with an `env` variable containing a snapshot of `process.env`
+2. A `now` variable is added (see below).  If the `tz` variable is present the values in `now` are specific to the `tz` time zone.
+3. All other `vars` properties are set as variables in the context. `vars` variables are not expected to contain JavaScript i.e. they are constants.
+4. `calcVars` are assumed to be script.  They are interpolated and can update the run context.
+5. `operations` are assumed to be script.  The one selected on the command line is interpolated.
+6. A `targets` are run the following can affect context:
+   1. `updates`: as each `search` completes any captured variables are added to the context, e.g. `begin` and `end` are common captures.  The `replace` value is interpolated. It's common to use a [JS template literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) to construct the `replace` string.  Capture variables are removed from the context after each update is performed.
+   2. `with`: the contents of the file to be written are interpolated.
+   3. `copyFrom`: the path name of the file that is to be copied are interpolated
+
+All [JS String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String) operations are available as well as `Math` and anything that does not need to be `require`'d.
+
+The interpolation feature is meant to be used to make the tool adaptable to different versioning strategies.  You could get yourself in a real mess if you try to do anything too crazy.  Check the source code if in doubt.
 
 ## About
 
-`stampver` is written in ES2019 Javascript using `babel` and built to target [NodeJS](https://nodejs.org/) v8 or above.
+`stampver` is written in [TypeScript](https://www.typescriptlang.org/) and built to target [NodeJS](https://nodejs.org/) 10 or above.
 
-I've used [JSON5](http://json5.org/) for the version file format because it is easier to type and maintain.  However the file is rewritten each time version information is updated, so any embedded comments will be lost.
+I've used my own fork of [JSON5](http://json5.org/) for the version file format. JSON5 is easy to type and maintain. The fork includes the ability to get line and column information for the parsed JSON5 to provide for better error messages.
 
 I've used [XRegExp](http://xregexp.com/) because it supports named groups.
