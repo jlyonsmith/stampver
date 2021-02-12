@@ -8,7 +8,7 @@ class ScriptError extends Error {
             this.message += ` (${node.fileName}:${node.line}:${node.column})`;
         }
         else {
-            this.message += ` ${node.line}:${node.column})`;
+            this.message += ` (${node.line}:${node.column})`;
         }
     }
     // Otherwise "Error: " is prefixed

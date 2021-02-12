@@ -71,7 +71,7 @@ class StampVerTool {
             }
             const scriptNode = json5_1.default.parse(content, { wantNodes: true });
             const addFileName = (node) => {
-                node.filename = fileName;
+                node.fileName = fileName;
                 switch (node.type) {
                     case "null":
                     case "numeric":
@@ -255,16 +255,22 @@ class StampVerTool {
                     const fileName = this.path.join(rootDirName, fileNode.value);
                     this.log.info(`  ${fileName} (${descriptionNode.value})`);
                     if (updatesNode) {
+                        let content = yield this.fs.readFile(fileName, { encoding: "utf8" });
                         for (const updateNode of updatesNode.value) {
                             const { search: searchNode, replace: replaceNode, } = updateNode.value;
-                            const search = this.XRegExp(searchNode.value, "m");
+                            let search;
+                            try {
+                                search = this.XRegExp(searchNode.value, "m");
+                            }
+                            catch (error) {
+                                throw new ScriptError_1.ScriptError(`${error.message}`, searchNode);
+                            }
                             const captureNames = search.xregexp.captureNames;
                             captureNames.forEach((name) => {
                                 if (runContext[name] !== undefined) {
                                     throw new Error(`Capture name '${name}' conflicts with existing variable`);
                                 }
                             });
-                            let content = yield this.fs.readFile(fileName, { encoding: "utf8" });
                             let found = false;
                             content = this.XRegExp.replace(content, search, (match) => {
                                 found = true;
@@ -272,12 +278,12 @@ class StampVerTool {
                                 return interpolator(replaceNode);
                             }, "one");
                             if (!found) {
-                                this.log.warning(`Search/replace on '${fileName}' did not match anything; check your search string`);
+                                this.log.warning(`Search/replace on '${fileName}' did not match anything; check your search string (${searchNode.fileName}:${searchNode.line}:${searchNode.column})`);
                             }
                             captureNames.forEach((name) => (runContext[name] = undefined));
-                            if (update) {
-                                yield this.fs.writeFile(fileName, content);
-                            }
+                        }
+                        if (update) {
+                            yield this.fs.writeFile(fileName, content);
                         }
                     }
                     else if (writeNode && update) {
@@ -302,8 +308,8 @@ class StampVerTool {
     run(argv) {
         return __awaiter(this, void 0, void 0, function* () {
             const options = {
-                string: ["increment"],
-                boolean: ["help", "version", "update", "sequence", "debug", "input"],
+                string: ["increment", "input"],
+                boolean: ["help", "version", "update", "sequence", "debug"],
                 alias: {
                     u: "update",
                     i: "input",
