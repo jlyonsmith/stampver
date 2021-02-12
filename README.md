@@ -1,5 +1,7 @@
 # Version Stamping Tool
 
+![GitHub package.json version](https://img.shields.io/github/package-json/v/jlyonsmith/stampver) ![Code coverage](https://img.shields.io/badge/coverage-100%25-green) ![npm](https://img.shields.io/npm/dm/@johnls/stampver) ![GitHub](https://img.shields.io/github/license/jlyonsmith/stampver)
+
 ## Overview
 
 This is a tool for updating version information in many types of software projects.  It stores version information in a JSON file at the root of the project. The file also contains information on how to update the various files within the project that contain version information.  This version file completely specifies how versioning works in the project and can be fully costomized. The tool has no opinion on how you do your versioning.
