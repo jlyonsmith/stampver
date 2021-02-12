@@ -127,4 +127,4 @@ The interpolation feature is meant to be used to make the tool adaptable to diff
 
 I've used my own fork of [JSON5](http://json5.org/) for the version file format. JSON5 is easy to type and maintain. The fork includes the ability to get line and column information for the parsed JSON5 to provide for better error messages.
 
-I've used [XRegExp](http://xregexp.com/) because it supports named groups.
+I've used [XRegExp](http://xregexp.com/) because it supports named groups.  [Shields.io](https://shields.io/) provides the badges.
