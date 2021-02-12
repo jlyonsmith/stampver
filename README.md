@@ -4,18 +4,17 @@
 
 ## Overview
 
-This is a tool for updating version information in many types of software projects.  It stores version information in a JSON file at the root of the project. The file also contains information on how to update the various files within the project that contain version information.  This version file completely specifies how versioning works in the project and can be fully costomized. The tool has no opinion on how you do your versioning.
+This is a tool for updating version information in software projects.  It stores version information in a JSON file at the root of the project. The file also contains information on how to update the various files within the project that need to contain version information.  This keeps version information centralized in one location but also available where it is needed in your application. The version file also completely specifies how versioning works in the project and the behavior can be fully costomized. The tool has no opinion on how you do your versioning.
 
-For this project, we had the following goals.  It must be able to:
+For this project, we had the following goals.  We must be able to:
 
-- Look at version file and see the list of affected files and the current version information *clearly*
-- Be flexible enough to fully customize version numbers and update strategy
-- Reliably update any *text file* with new version information
-- Perform update-in-place, write-new and copy-in functions on files
+- Look at version file and see the list of affected files and the current version information clearly.
+- Be able to fully customize the format of version numbers and update strategy.
+- Reliably update any source code text file with new version information in-place.
+- Be able to write-new version files.
+- Be able to copy-in specific files related to versioning and build types.
 
-The tool supports [Semantic Versioning](https://semver.org/) easily, but it can also support other the many other types of versioning strategies in use.
-
-The version file can also contain other arbitrary and useful data such as copyright information and project names.
+The tool supports [Semantic Versioning](https://semver.org/) easily, but it can also support the many other types of versioning strategies in use today. The version file can also contain other arbitrary and useful data such as copyright information and project names.
 
 ## Installation
 
