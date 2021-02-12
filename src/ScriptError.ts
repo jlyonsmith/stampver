@@ -5,7 +5,7 @@ export class ScriptError extends Error {
     if (node.fileName) {
       this.message += ` (${node.fileName}:${node.line}:${node.column})`
     } else {
-      this.message += ` ${node.line}:${node.column})`
+      this.message += ` (${node.line}:${node.column})`
     }
   }
 

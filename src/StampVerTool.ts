@@ -83,7 +83,7 @@ export class StampVerTool {
 
     const scriptNode = JSON5.parse(content, { wantNodes: true })
     const addFileName = (node) => {
-      node.filename = fileName
+      node.fileName = fileName
 
       switch (node.type) {
         case "null":
@@ -382,12 +382,20 @@ export class StampVerTool {
         this.log.info(`  ${fileName} (${descriptionNode.value})`)
 
         if (updatesNode) {
+          let content = await this.fs.readFile(fileName, { encoding: "utf8" })
+
           for (const updateNode of updatesNode.value) {
             const {
               search: searchNode,
               replace: replaceNode,
             } = updateNode.value
-            const search = this.XRegExp(searchNode.value, "m")
+            let search
+
+            try {
+              search = this.XRegExp(searchNode.value, "m")
+            } catch (error) {
+              throw new ScriptError(`${error.message}`, searchNode)
+            }
             const captureNames = search.xregexp.captureNames
 
             captureNames.forEach((name) => {
@@ -398,7 +406,6 @@ export class StampVerTool {
               }
             })
 
-            let content = await this.fs.readFile(fileName, { encoding: "utf8" })
             let found = false
 
             content = this.XRegExp.replace(
@@ -414,15 +421,15 @@ export class StampVerTool {
 
             if (!found) {
               this.log.warning(
-                `Search/replace on '${fileName}' did not match anything; check your search string`
+                `Search/replace on '${fileName}' did not match anything; check your search string (${searchNode.fileName}:${searchNode.line}:${searchNode.column})`
               )
             }
 
             captureNames.forEach((name) => (runContext[name] = undefined))
+          }
 
-            if (update) {
-              await this.fs.writeFile(fileName, content)
-            }
+          if (update) {
+            await this.fs.writeFile(fileName, content)
           }
         } else if (writeNode && update) {
           await this.fs.writeFile(fileName, interpolator(writeNode))
@@ -449,8 +456,8 @@ export class StampVerTool {
 
   async run(argv: string[]): Promise<0 | -1> {
     const options = {
-      string: ["increment"],
-      boolean: ["help", "version", "update", "sequence", "debug", "input"],
+      string: ["increment", "input"],
+      boolean: ["help", "version", "update", "sequence", "debug"],
       alias: {
         u: "update",
         i: "input",

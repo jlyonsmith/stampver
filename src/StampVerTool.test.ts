@@ -596,6 +596,22 @@ test("processTargets", async () => {
       false
     )
   ).rejects.toThrowError()
+
+  // Bad regexp
+  container.XRegExp = function () {
+    throw new Error()
+  }
+  tool = new StampVerTool(container)
+
+  await expect(
+    tool.processTargets(
+      "/a/b/version.json",
+      {},
+      interpolator,
+      scriptNode,
+      false
+    )
+  ).rejects.toThrowError()
 })
 
 test("updateScriptFile", async () => {
