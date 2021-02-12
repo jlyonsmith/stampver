@@ -1,6 +1,6 @@
 # Version Stamping Tool
 
-![GitHub package.json version](https://img.shields.io/github/package-json/v/jlyonsmith/stampver) ![Code coverage](https://img.shields.io/badge/coverage-100%25-green) [![npm](https://img.shields.io/npm/dm/@johnls/stampver)](https://www.npmjs.com/package/@johnls/stampver) [![GitHub](https://img.shields.io/github/license/jlyonsmith/stampver)](https://github.com/jlyonsmith/stampver/blob/master/LICENSE)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/jlyonsmith/stampver) ![Code coverage](https://img.shields.io/badge/coverage-100%25-green) [![npm](https://img.shields.io/npm/dm/@johnls/stampver)](https://www.npmjs.com/package/@johnls/stampver) [![GitHub](https://img.shields.io/github/license/jlyonsmith/stampver)](https://raw.githubusercontent.com/jlyonsmith/stampver/master/LICENSE)
 
 ## Overview
 
