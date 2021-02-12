@@ -434,7 +434,10 @@ export class StampVerTool {
         } else if (writeNode && update) {
           await this.fs.writeFile(fileName, interpolator(writeNode))
         } else if (copyFromNode && update) {
-          await this.fs.copyFile(interpolator(copyFromNode.value), fileName)
+          await this.fs.copyFile(
+            this.path.join(rootDirName, interpolator(copyFromNode)),
+            fileName
+          )
         }
       }
     }

@@ -560,7 +560,7 @@ test("processTargets", async () => {
       }
     ],
   }`)
-  const interpolator = (x) => x
+  const interpolator = (x) => x.toString()
 
   await expect(
     tool.processTargets("/a/b/version.json", {}, interpolator, scriptNode, true)
