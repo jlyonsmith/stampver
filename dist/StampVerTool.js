@@ -290,7 +290,7 @@ class StampVerTool {
                         yield this.fs.writeFile(fileName, interpolator(writeNode));
                     }
                     else if (copyFromNode && update) {
-                        yield this.fs.copyFile(interpolator(copyFromNode.value), fileName);
+                        yield this.fs.copyFile(this.path.join(rootDirName, interpolator(copyFromNode)), fileName);
                     }
                 }
             }
