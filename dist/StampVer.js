@@ -6,6 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const StampVerTool_1 = require("./StampVerTool");
 const chalk_1 = __importDefault(require("chalk"));
+const path_1 = __importDefault(require("path"));
 class ConsoleLogger {
     info(...params) {
         console.info(...params);
@@ -18,7 +19,10 @@ class ConsoleLogger {
     }
 }
 const log = new ConsoleLogger();
-const tool = new StampVerTool_1.StampVerTool({ toolName: "stampver", log });
+const tool = new StampVerTool_1.StampVerTool({
+    toolName: path_1.default.basename(process.argv[1], ".js"),
+    log,
+});
 tool
     .run(process.argv.slice(2))
     .then((exitCode) => {
