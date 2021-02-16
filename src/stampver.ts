@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { StampVerTool } from "./StampVerTool"
 import chalk from "chalk"
+import path from "path"
 import { Logger } from "./Logger"
 
 class ConsoleLogger implements Logger {
@@ -16,7 +17,10 @@ class ConsoleLogger implements Logger {
 }
 
 const log = new ConsoleLogger()
-const tool = new StampVerTool({ toolName: "stampver", log })
+const tool = new StampVerTool({
+  toolName: path.basename(process.argv[1], ".js"),
+  log,
+})
 tool
   .run(process.argv.slice(2))
   .then((exitCode) => {
