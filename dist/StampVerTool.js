@@ -260,7 +260,7 @@ class StampVerTool {
                             const { search: searchNode, replace: replaceNode, } = updateNode.value;
                             let search;
                             try {
-                                search = this.XRegExp(searchNode.value, "m");
+                                search = this.XRegExp(searchNode.value, "gm");
                             }
                             catch (error) {
                                 throw new ScriptError_1.ScriptError(`${error.message}`, searchNode);
@@ -276,7 +276,7 @@ class StampVerTool {
                                 found = true;
                                 captureNames.forEach((name) => (runContext[name] = match[name]));
                                 return interpolator(replaceNode);
-                            }, "one");
+                            });
                             if (!found) {
                                 this.log.warning(`Search/replace on '${fileName}' did not match anything; check your search string (${searchNode.fileName}:${searchNode.line}:${searchNode.column})`);
                             }
