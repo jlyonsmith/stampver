@@ -392,7 +392,7 @@ export class StampVerTool {
             let search
 
             try {
-              search = this.XRegExp(searchNode.value, "m")
+              search = this.XRegExp(searchNode.value, "gm")
             } catch (error) {
               throw new ScriptError(`${error.message}`, searchNode)
             }
@@ -408,16 +408,11 @@ export class StampVerTool {
 
             let found = false
 
-            content = this.XRegExp.replace(
-              content,
-              search,
-              (match) => {
-                found = true
-                captureNames.forEach((name) => (runContext[name] = match[name]))
-                return interpolator(replaceNode)
-              },
-              "one"
-            )
+            content = this.XRegExp.replace(content, search, (match) => {
+              found = true
+              captureNames.forEach((name) => (runContext[name] = match[name]))
+              return interpolator(replaceNode)
+            })
 
             if (!found) {
               this.log.warning(
